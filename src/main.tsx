@@ -1,10 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import Juego from './Juego.tsx'
+import Inicio from './Inicio.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Juego />
+    <Inicio />
   </StrictMode>,
 )

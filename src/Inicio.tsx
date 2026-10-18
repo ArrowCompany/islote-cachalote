@@ -1,0 +1,218 @@
+import { useEffect, useState } from 'react';
+import { COLORES, cambiarColor, crearSala, escucharSala, existeJugador, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
+import type { Sala } from './salas';
+import Juego from './Juego';
+import './lobby.css';
+
+type Pantalla = 'inicio' | 'sala' | 'tablero';
+
+const mensaje = (e: unknown) => (e instanceof Error ? e.message : 'Algo salió mal, intenta otra vez');
+
+export default function Inicio() {
+  const [uid, setUid] = useState('');
+  const [pantalla, setPantalla] = useState<Pantalla>('inicio');
+  const [nombre, setNombre] = useState(localStorage.getItem('nombre') ?? '');
+  const [color, setColor] = useState(localStorage.getItem('color') ?? '');
+  const [codigo, setCodigo] = useState(new URLSearchParams(window.location.search).get('sala') ?? '');
+  const [sala, setSala] = useState<Sala | null>(null);
+  const [error, setError] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
+  useEffect(() => {
+    iniciarSesion().then((u) => setUid(u.uid)).catch((e) => setError(mensaje(e)));
+  }, []);
+
+  useEffect(() => {
+    const guardada = localStorage.getItem('sala');
+    if (!uid || !guardada) return;
+    existeJugador(guardada, uid).then((ok) => {
+      if (ok) {
+        setCodigo(guardada);
+        setPantalla('sala');
+      } else {
+        localStorage.removeItem('sala');
+      }
+    });
+  }, [uid]);
+
+  useEffect(() => {
+    if (pantalla !== 'sala' || !uid || !codigo) return;
+    const dejarDeEscuchar = escucharSala(codigo, setSala);
+    const dejarPresencia = marcarPresencia(codigo, uid);
+    return () => {
+      dejarDeEscuchar();
+      dejarPresencia();
+    };
+  }, [pantalla, uid, codigo]);
+
+  const datosValidos = () => {
+    if (!uid) { setError('Conectando, espera un momento...'); return false; }
+    if (nombre.trim().length < 2) { setError('Escribe tu nombre'); return false; }
+    if (!color) { setError('Elige tu color'); return false; }
+    return true;
+  };
+  const entrarASala = (c: string) => {
+    localStorage.setItem('nombre', nombre.trim());
+    localStorage.setItem('color', color);
+    localStorage.setItem('sala', c);
+    setCodigo(c);
+    setSala(null);
+    setPantalla('sala');
+  };
+  const crear = async () => {
+    setError('');
+    if (!datosValidos()) return;
+    setCargando(true);
+    try {
+      entrarASala(await crearSala(uid, nombre.trim(), color));
+    } catch (e) {
+      setError(mensaje(e));
+    }
+    setCargando(false);
+  };
+  const entrar = async () => {
+    setError('');
+    if (!datosValidos()) return;
+    const c = codigo.trim();
+    if (c.length !== 6) { setError('El código tiene 6 números'); return; }
+    setCargando(true);
+    try {
+      await unirseSala(c, uid, nombre.trim(), color);
+      entrarASala(c);
+    } catch (e) {
+      setError(mensaje(e));
+    }
+    setCargando(false);
+  };
+  const salir = async () => {
+    try {
+      await salirSala(codigo, uid);
+    } catch (e) {
+      setError(mensaje(e));
+    }
+    localStorage.removeItem('sala');
+    setSala(null);
+    setPantalla('inicio');
+  };
+  const elegirColor = async (id: string) => {
+    setError('');
+    try {
+      await cambiarColor(codigo, uid, id);
+      setColor(id);
+      localStorage.setItem('color', id);
+    } catch (e) {
+      setError(mensaje(e));
+    }
+  };
+  const copiar = async () => {
+    const enlace = window.location.origin + window.location.pathname + '?sala=' + codigo;
+    try {
+      await navigator.clipboard.writeText(enlace);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      setError('No pude copiar. Pasa este código: ' + codigo);
+    }
+  };
+
+  if (pantalla === 'tablero') {
+    return (
+      <div>
+        <button className="volver" onClick={() => setPantalla('sala')}>← Volver a la sala</button>
+        <Juego />
+      </div>
+    );
+  }
+
+  if (pantalla === 'sala') {
+    const jugadores = Object.entries(sala?.jugadores ?? {})
+      .filter(([, j]) => j.nombre)
+      .sort((a, b) => a[1].orden - b[1].orden);
+    const yo = sala?.jugadores?.[uid];
+    const ocupados = jugadores.filter(([id]) => id !== uid).map(([, j]) => j.color);
+    const hex = (id: string) => COLORES.find((c) => c.id === id)?.hex ?? '#888';
+    return (
+      <div className="lobby">
+        <div className="caja">
+          <h1>Sala de espera</h1>
+          <div className="codigo">{codigo}</div>
+          <button className="btn sec" onClick={copiar}>{copiado ? '¡Enlace copiado!' : 'Copiar enlace para invitar'}</button>
+          {error && <div className="error">{error}</div>}
+          {!sala && <p>Cargando sala...</p>}
+          {sala && !yo && <p>Ya no estás en esta sala.</p>}
+          <h2>Jugadores ({jugadores.length}/6)</h2>
+          <div className="lista">
+            {jugadores.map(([id, j]) => (
+              <div className="fila" key={id}>
+                <span className="punto" style={{ background: hex(j.color) }} />
+                <span className="nombre">{j.nombre}{id === sala?.anfitrion ? ' 👑' : ''}{id === uid ? ' (tú)' : ''}</span>
+                <span className="estado">{j.conectado === false ? '⚪ desconectado' : j.listo ? '✅ listo' : '⏳ esperando'}</span>
+              </div>
+            ))}
+          </div>
+          {yo && (
+            <>
+              <h2>Tu color</h2>
+              <div className="colores">
+                {COLORES.map((c) => (
+                  <button
+                    key={c.id}
+                    title={c.nombre}
+                    aria-label={c.nombre}
+                    className={yo.color === c.id ? 'sel' : ''}
+                    style={{ background: c.hex }}
+                    disabled={ocupados.includes(c.id)}
+                    onClick={() => elegirColor(c.id)}
+                  />
+                ))}
+              </div>
+              <button className="btn" onClick={() => void marcarListo(codigo, uid, !yo.listo)}>
+                {yo.listo ? 'Ya no estoy listo' : 'Estoy listo'}
+              </button>
+            </>
+          )}
+          {sala?.anfitrion === uid && (
+            <p>Eres el anfitrión 👑. En la siguiente parte aquí aparecerá la configuración y el botón para iniciar la partida.</p>
+          )}
+          <button className="btn sec" onClick={() => setPantalla('tablero')}>Ver tablero de prueba</button>
+          <button className="btn sec" onClick={salir}>Salir de la sala</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="lobby">
+      <div className="caja">
+        <h1>Islote Cachalote 🐋</h1>
+        <p>¡Hola! Antes de empezar, escribe tu nombre y elige tu color.</p>
+        <input placeholder="Tu nombre" value={nombre} maxLength={14} onChange={(e) => setNombre(e.target.value)} />
+        <div className="colores">
+          {COLORES.map((c) => (
+            <button
+              key={c.id}
+              title={c.nombre}
+              aria-label={c.nombre}
+              className={color === c.id ? 'sel' : ''}
+              style={{ background: c.hex }}
+              onClick={() => setColor(c.id)}
+            />
+          ))}
+        </div>
+        {error && <div className="error">{error}</div>}
+        <h2>Entrar a una sala</h2>
+        <input
+          placeholder="Código de la sala (6 números)"
+          inputMode="numeric"
+          maxLength={6}
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
+        />
+        <button className="btn" disabled={cargando} onClick={entrar}>Entrar a la sala</button>
+        <h2>¿Eres el anfitrión?</h2>
+        <button className="btn sec" disabled={cargando} onClick={crear}>Crear sala nueva</button>
+      </div>
+    </div>
+  );
+}

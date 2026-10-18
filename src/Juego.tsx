@@ -10,7 +10,8 @@ const INICIO = { x: 0, y: 0, k: 1 };
 export default function Juego() {
   const [modo, setModo] = useState<Modo>('p');
   const [vista, setVista] = useState(INICIO);
-  const svg = useMemo(() => dibujarTablero(modo), [modo]);
+  const [semilla, setSemilla] = useState(11);
+  const svg = useMemo(() => dibujarTablero(modo, semilla), [modo, semilla]);
   const punteros = useRef(new Map<number, Punto>());
   const distAnterior = useRef(0);
 
@@ -53,6 +54,7 @@ export default function Juego() {
         <button className="on" onClick={() => zoom(1.25)}>+</button>
         <button className="on" onClick={() => zoom(0.8)}>−</button>
         <button className="on" onClick={() => setVista(INICIO)}>Centrar</button>
+        <button className="on" onClick={() => setSemilla(Math.floor(Math.random() * 2147483646) + 1)}>🎲 Mapa aleatorio</button>
       </div>
       <div
         className="visor"

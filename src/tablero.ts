@@ -8,8 +8,8 @@ const RH = 60;
 const K = S / 46;
 
 const TIERRAS: Record<Modo, Record<number, number[]>> = {
-  g: { 0: [1, 2, 8, 9], 1: [0, 1, 2, 3, 4, 7, 8], 2: [0, 1, 2, 3, 4, 5, 6, 7, 8], 3: [0, 1, 2, 3, 4, 5, 6], 4: [1, 2, 3, 4, 6], 5: [1, 2] },
-  p: { 0: [1, 5], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 2, 3, 4, 5], 3: [0, 1, 2, 3], 4: [1, 2] },
+  g: { 0: [1, 8, 9], 1: [0, 1, 2, 3, 4, 7, 8], 2: [0, 1, 2, 3, 4, 5, 6, 7], 3: [0, 1, 2, 3, 4, 5], 4: [1, 2, 3, 4, 6], 5: [1] },
+  p: { 0: [1, 5], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 2, 3, 4, 5], 3: [0, 1, 2], 4: [1, 2] },
 };
 const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8f7bdc', desert: '#ead9a3' };
 const IN = 'M0 -42L36.4 -21V21L0 42L-36.4 21V-21Z';
@@ -100,13 +100,11 @@ function ficha(t: string, rn: Rng) {
   return '<path d="M0 -34L39.8 -11V35L0 58L-39.8 35V-11Z" fill="#000" opacity=".35"/><path d="M0 -41L39.8 -18V28L0 51L-39.8 28V-18Z" fill="#9c8858"/><path d="M0 -46L39.8 -23V23L0 46L-39.8 23V-23Z" fill="#f3e6c4"/><path d="' + IN + '" fill="' + COLOR[t] + '"/>' + sp(rn, '#000', 40, 0.12) + sp(rn, '#fff', 30, 0.15) + D[t](rn) + '<path d="' + IN + '" fill="url(#sh)"/>';
 }
 
-export function dibujarTablero(modo: Modo): string {
+export function dibujarTablero(modo: Modo, semilla: number = 11): string {
   const grande = modo === 'g';
   const tierra = TIERRAS[modo];
   const OX = grande ? 110 : 255;
   const OY = grande ? 108 : 135;
-  const DR = grande ? 3 : 2;
-  const DC = grande ? 3 : 2;
   const esT = (r: number, c: number) => (tierra[r] ?? []).includes(c);
   const pos = (r: number, c: number): Celda => [OX + c * W + (r & 1 ? W / 2 : 0), OY + r * RH];
   const vec = (r: number, c: number): Celda[] =>
@@ -138,30 +136,64 @@ export function dibujarTablero(modo: Modo): string {
     o += '<path d="' + hp(x, y, S + 4) + '" fill="none" stroke="#d8f4ff" stroke-width="5" opacity=".35"/>';
   });
 
-  let seed = 11;
+  let seed = semilla;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+
+  const candidatas = [...lista];
+  for (let i = candidatas.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [candidatas[i], candidatas[j]] = [candidatas[j], candidatas[i]];
+  }
+  const desiertos: Celda[] = [candidatas[0]];
+  if (grande) {
+    const vecinos = vec(candidatas[0][0], candidatas[0][1]).map(([vr, vc]) => vr + ',' + vc);
+    const segundo = candidatas.slice(1).find(([r, c]) => !vecinos.includes(r + ',' + c));
+    if (segundo) desiertos.push(segundo);
+  }
+
   const cuentas: [string, number][] = grande
-    ? [['wood', 7], ['wool', 7], ['grain', 7], ['brick', 6], ['ore', 6]]
-    : [['wood', 4], ['wool', 4], ['grain', 4], ['brick', 4], ['ore', 3]];
+    ? [['wood', 6], ['wool', 6], ['grain', 6], ['brick', 5], ['ore', 5]]
+    : [['wood', 4], ['wool', 4], ['grain', 4], ['brick', 3], ['ore', 3]];
   const tipos: string[] = [];
   cuentas.forEach(([t, n]) => { for (let i = 0; i < n; i++) tipos.push(t); });
   for (let i = tipos.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
     [tipos[i], tipos[j]] = [tipos[j], tipos[i]];
   }
-  const nums = [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11, 6, 8, 5, 9, 10, 3, 4, 11, 12, 2, 6, 8, 5, 9, 10].slice(0, grande ? 33 : 19);
-  if (!grande) { [nums[6], nums[7]] = [nums[7], nums[6]]; } else { [nums[9], nums[10]] = [nums[10], nums[9]]; }
+
+  const fichasNum = grande
+    ? [2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12]
+    : [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
+  const celdasRec = lista.filter(([r, c]) => !desiertos.some(([dr, dc]) => dr === r && dc === c));
+  const indice = new Map<string, number>(celdasRec.map(([r, c], i) => [r + ',' + c, i] as [string, number]));
+  const esRojo = (n: number) => n === 6 || n === 8;
+  let nums = [...fichasNum];
+  for (let intento = 0; intento < 300; intento++) {
+    nums = [...fichasNum];
+    for (let i = nums.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [nums[i], nums[j]] = [nums[j], nums[i]];
+    }
+    const mal = celdasRec.some(([r, c], i) =>
+      esRojo(nums[i]) && vec(r, c).some(([vr, vc]) => {
+        const j = indice.get(vr + ',' + vc);
+        return j !== undefined && esRojo(nums[j]);
+      })
+    );
+    if (!mal) break;
+  }
 
   const txt = 'font-family:system-ui,sans-serif;font-weight:600;text-anchor:middle;';
   let k = 0, ti = 0, fichas = '';
   lista.forEach(([r, c]) => {
     const [x, y] = pos(r, c);
-    const rn = mk(100 + ti++ * 7);
-    if (r === DR && c === DC) {
-      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha('desert', rn) + '<g transform="translate(0,2)"><ellipse cx="2" cy="18" rx="36" ry="7" fill="#6b5a2f" opacity=".5"/><path d="M-36 6Q-38 -12 -14 -14Q10 -16 24 -4L35 -18L34 4L40 14L24 9Q8 22 -14 20Q-32 18 -36 6Z" fill="#06222f"/><path d="M-30 -4Q-10 -14 18 -6" stroke="#3b6b82" stroke-width="2" fill="none" opacity=".7"/><path d="M-32 10Q-12 18 12 12" stroke="#7fb0c4" stroke-width="2" fill="none"/><path d="M-27 -2q3 5 0 10M-22 -4q3 6 0 12" stroke="#14455c" stroke-width="1.2" fill="none"/><circle cx="-24" cy="-2" r="2.6" fill="#fff7e0"/><circle cx="-24" cy="-2" r="1.2" fill="#06222f"/><path d="M-20 -14Q-24 -28 -33 -26M-20 -14Q-16 -28 -7 -26M-20 -14V-32" stroke="#5cc8e8" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="-34" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-6" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-20" cy="-36" r="1.8" fill="#bfefff"/></g></g>';
+    const rn = mk(100 + ti++ * 7 + (semilla % 1000));
+    const iDes = desiertos.findIndex(([dr, dc]) => dr === r && dc === c);
+    if (iDes >= 0) {
+      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha('desert', rn) + (iDes === 0 ? '<g transform="translate(0,2)"><ellipse cx="2" cy="18" rx="36" ry="7" fill="#6b5a2f" opacity=".5"/><path d="M-36 6Q-38 -12 -14 -14Q10 -16 24 -4L35 -18L34 4L40 14L24 9Q8 22 -14 20Q-32 18 -36 6Z" fill="#06222f"/><path d="M-30 -4Q-10 -14 18 -6" stroke="#3b6b82" stroke-width="2" fill="none" opacity=".7"/><path d="M-32 10Q-12 18 12 12" stroke="#7fb0c4" stroke-width="2" fill="none"/><path d="M-27 -2q3 5 0 10M-22 -4q3 6 0 12" stroke="#14455c" stroke-width="1.2" fill="none"/><circle cx="-24" cy="-2" r="2.6" fill="#fff7e0"/><circle cx="-24" cy="-2" r="1.2" fill="#06222f"/><path d="M-20 -14Q-24 -28 -33 -26M-20 -14Q-16 -28 -7 -26M-20 -14V-32" stroke="#5cc8e8" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="-34" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-6" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-20" cy="-36" r="1.8" fill="#bfefff"/></g>' : '') + '</g>';
     } else {
       const tp = tipos[k], n = nums[k];
-      const rojo = n === 6 || n === 8;
+      const rojo = esRojo(n);
       k++;
       o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha(tp, rn) + '</g>';
       fichas += '<circle cx="' + f(x + 1) + '" cy="' + f(y + 3) + '" r="17" fill="#000" opacity=".3"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="17" fill="#fff3d6" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="14" fill="none" stroke="#d9c08a" stroke-width=".8"/><text x="' + f(x) + '" y="' + f(y + 3) + '" style="' + txt + 'font-size:18px;fill:' + (rojo ? '#c0392b' : '#3b2a14') + '">' + n + '</text>';
@@ -177,10 +209,16 @@ export function dibujarTablero(modo: Modo): string {
   const arr = claves
     .map((q) => { const n = mar.get(q)!; const p = pos(n[0], n[1]); return { n, x: p[0], y: p[1], a: Math.atan2(p[1] - cy, p[0] - cx) }; })
     .sort((a, b) => a.a - b.a);
-  const tiposPuerto = ['3', 'wood', '3', 'brick', '3', 'wool', '3', 'grain', 'ore'];
+  const tiposPuerto = grande
+    ? ['3', 'wood', '3', 'brick', '3', 'wool', '3', 'grain', 'ore', '3', 'wool']
+    : ['3', 'wood', '3', 'brick', '3', 'wool', '3', 'grain', 'ore'];
+  for (let i = tiposPuerto.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [tiposPuerto[i], tiposPuerto[j]] = [tiposPuerto[j], tiposPuerto[i]];
+  }
   let etiquetas = '';
   tiposPuerto.forEach((kd, i) => {
-    const q = arr[Math.floor(((i + 0.5) * arr.length) / 9)];
+    const q = arr[Math.floor(((i + 0.5) * arr.length) / tiposPuerto.length)];
     const lt = vec(q.n[0], q.n[1]).find((m) => esT(m[0], m[1]));
     if (!lt) return;
     const lp = pos(lt[0], lt[1]);
