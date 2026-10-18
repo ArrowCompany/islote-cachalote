@@ -1,0 +1,27 @@
+.partida { height: 100dvh; display: flex; flex-direction: column; background: #071d2b; color: #f3e6c4; font-family: system-ui, sans-serif; }
+.partida .cargando { margin: auto; }
+.cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; }
+.cabecera .salir { font: 700 14px system-ui, sans-serif; padding: 8px 12px; border-radius: 10px; border: 0; background: #f3e6c4; color: #3b2a14; cursor: pointer; }
+.cabecera .turno { font-weight: 700; font-size: 17px; text-align: center; flex: 1; }
+.cabecera .reloj { font: 700 20px system-ui, sans-serif; background: #0b2f44; padding: 6px 12px; border-radius: 10px; min-width: 70px; text-align: center; }
+.cabecera .reloj.urgente { background: #a33; color: #fff; }
+.jugadores { display: flex; gap: 8px; overflow-x: auto; padding: 4px 8px 8px; }
+.jug { flex: none; min-width: 124px; padding: 6px 8px; border-radius: 10px; background: #0b2f44; border: 2px solid transparent; font-size: 13px; }
+.jug.actual { border-color: #f3e6c4; }
+.jug-nombre { display: flex; align-items: center; gap: 6px; font-weight: 700; margin-bottom: 2px; }
+.jug-nombre .punto { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; flex: none; }
+.jug-datos { opacity: 0.9; white-space: nowrap; }
+.tablero-caja { flex: 1; min-height: 0; display: flex; }
+.tablero-caja .juego { height: auto; flex: 1; min-height: 0; }
+.pie { display: flex; align-items: center; gap: 14px; padding: 10px 12px; background: #0b2f44; }
+.dados { display: flex; gap: 10px; }
+.dado { width: 54px; height: 54px; background: #fff7e0; border-radius: 12px; border: 2px solid #8a5a2b; box-shadow: 0 4px 0 #8a5a2b; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 7px; box-sizing: border-box; }
+.dado .p { border-radius: 50%; }
+.dado .p.on { background: #3b2a14; }
+.dado.rodando { animation: girar 0.45s linear infinite; }
+@keyframes girar { from { transform: rotate(0deg) scale(1.1); } 50% { transform: rotate(180deg) scale(0.95); } to { transform: rotate(360deg) scale(1.1); } }
+.acciones { flex: 1; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.acciones .suma { font-weight: 700; }
+.acciones .accion { font: 700 17px system-ui, sans-serif; padding: 12px 18px; border-radius: 12px; border: 0; background: #f3e6c4; color: #3b2a14; cursor: pointer; }
+.acciones .espera { opacity: 0.85; }
+.error-mini { background: #5a1f2b; padding: 6px 10px; border-radius: 8px; font-size: 13px; }

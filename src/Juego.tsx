@@ -5,12 +5,16 @@ import type { Modo } from './tablero';
 import './juego.css';
 
 type Punto = { x: number; y: number };
+type Props = { modo?: Modo; semilla?: number };
 const INICIO = { x: 0, y: 0, k: 1 };
 
-export default function Juego() {
-  const [modo, setModo] = useState<Modo>('p');
+export default function Juego({ modo: modoFijo, semilla: semillaFija }: Props) {
+  const fijo = modoFijo !== undefined && semillaFija !== undefined;
+  const [modoLibre, setModoLibre] = useState<Modo>('p');
+  const [semillaLibre, setSemillaLibre] = useState(11);
   const [vista, setVista] = useState(INICIO);
-  const [semilla, setSemilla] = useState(11);
+  const modo: Modo = modoFijo ?? modoLibre;
+  const semilla: number = semillaFija ?? semillaLibre;
   const svg = useMemo(() => dibujarTablero(modo, semilla), [modo, semilla]);
   const punteros = useRef(new Map<number, Punto>());
   const distAnterior = useRef(0);
@@ -44,17 +48,23 @@ export default function Juego() {
   const alSoltar = (e: PE<HTMLDivElement>) => {
     punteros.current.delete(e.pointerId);
   };
-  const cambiar = (m: Modo) => { setModo(m); setVista(INICIO); };
+  const cambiar = (m: Modo) => { setModoLibre(m); setVista(INICIO); };
 
   return (
     <div className="juego">
       <div className="barra">
-        <button className={modo === 'p' ? 'on' : ''} onClick={() => cambiar('p')}>3 o 4 jugadores</button>
-        <button className={modo === 'g' ? 'on' : ''} onClick={() => cambiar('g')}>5 o 6 jugadores</button>
+        {!fijo && (
+          <>
+            <button className={modo === 'p' ? 'on' : ''} onClick={() => cambiar('p')}>3 o 4 jugadores</button>
+            <button className={modo === 'g' ? 'on' : ''} onClick={() => cambiar('g')}>5 o 6 jugadores</button>
+          </>
+        )}
         <button className="on" onClick={() => zoom(1.25)}>+</button>
         <button className="on" onClick={() => zoom(0.8)}>−</button>
         <button className="on" onClick={() => setVista(INICIO)}>Centrar</button>
-        <button className="on" onClick={() => setSemilla(Math.floor(Math.random() * 2147483646) + 1)}>🎲 Mapa aleatorio</button>
+        {!fijo && (
+          <button className="on" onClick={() => setSemillaLibre(Math.floor(Math.random() * 2147483646) + 1)}>🎲 Mapa aleatorio</button>
+        )}
       </div>
       <div
         className="visor"

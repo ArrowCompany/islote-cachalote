@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { COLORES, cambiarColor, crearSala, escucharSala, existeJugador, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
-import type { Sala } from './salas';
+import { COLORES, CONFIG_INICIAL, cambiarColor, crearSala, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
+import type { Config, Sala } from './salas';
 import Juego from './Juego';
+import Partida from './Partida';
 import './lobby.css';
 
-type Pantalla = 'inicio' | 'sala' | 'tablero';
+type Pantalla = 'inicio' | 'sala' | 'partida' | 'prueba';
 
+const MIN_JUGADORES = 2;
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : 'Algo salió mal, intenta otra vez');
 
 export default function Inicio() {
@@ -37,7 +39,7 @@ export default function Inicio() {
   }, [uid]);
 
   useEffect(() => {
-    if (pantalla !== 'sala' || !uid || !codigo) return;
+    if (pantalla === 'inicio' || !uid || !codigo) return;
     const dejarDeEscuchar = escucharSala(codigo, setSala);
     const dejarPresencia = marcarPresencia(codigo, uid);
     return () => {
@@ -45,6 +47,10 @@ export default function Inicio() {
       dejarPresencia();
     };
   }, [pantalla, uid, codigo]);
+
+  useEffect(() => {
+    if (pantalla === 'sala' && sala?.estado === 'jugando') setPantalla('partida');
+  }, [pantalla, sala]);
 
   const datosValidos = () => {
     if (!uid) { setError('Conectando, espera un momento...'); return false; }
@@ -95,6 +101,9 @@ export default function Inicio() {
     setSala(null);
     setPantalla('inicio');
   };
+  const salirDePartida = () => {
+    if (window.confirm('¿Salir de la partida?')) void salir();
+  };
   const elegirColor = async (id: string) => {
     setError('');
     try {
@@ -116,13 +125,24 @@ export default function Inicio() {
     }
   };
 
-  if (pantalla === 'tablero') {
+  if (pantalla === 'prueba') {
     return (
       <div>
         <button className="volver" onClick={() => setPantalla('sala')}>← Volver a la sala</button>
         <Juego />
       </div>
     );
+  }
+
+  if (pantalla === 'partida') {
+    if (!sala?.partida || !sala.juego) {
+      return (
+        <div className="lobby">
+          <div className="caja"><p>Cargando partida...</p></div>
+        </div>
+      );
+    }
+    return <Partida sala={sala} uid={uid} codigo={codigo} onSalir={salirDePartida} />;
   }
 
   if (pantalla === 'sala') {
@@ -132,6 +152,20 @@ export default function Inicio() {
     const yo = sala?.jugadores?.[uid];
     const ocupados = jugadores.filter(([id]) => id !== uid).map(([, j]) => j.color);
     const hex = (id: string) => COLORES.find((c) => c.id === id)?.hex ?? '#888';
+    const cfg: Config = sala?.config ?? CONFIG_INICIAL;
+    const esAnfitrion = sala?.anfitrion === uid;
+    const todosListos = jugadores.length >= MIN_JUGADORES && jugadores.every(([, j]) => j.listo);
+    const cambiarCfg = (parcial: Partial<Config>) => {
+      void guardarConfig(codigo, { ...cfg, ...parcial });
+    };
+    const iniciar = async () => {
+      setError('');
+      try {
+        await iniciarPartida(codigo, cfg, jugadores.map(([id]) => id));
+      } catch (e) {
+        setError(mensaje(e));
+      }
+    };
     return (
       <div className="lobby">
         <div className="caja">
@@ -172,10 +206,34 @@ export default function Inicio() {
               </button>
             </>
           )}
-          {sala?.anfitrion === uid && (
-            <p>Eres el anfitrión 👑. En la siguiente parte aquí aparecerá la configuración y el botón para iniciar la partida.</p>
+          <h2>Configuración {esAnfitrion ? '' : '(la elige el anfitrión)'}</h2>
+          <div className="opciones">
+            <span className="etq">Mapa</span>
+            <div className="grupo">
+              <button className={cfg.mapa === 'aleatorio' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'aleatorio' })}>🎲 Aleatorio</button>
+              <button className={cfg.mapa === 'normal' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'normal' })}>Normal</button>
+            </div>
+            <span className="etq">Chat de grupo</span>
+            <div className="grupo">
+              <button className={cfg.chat ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ chat: true })}>Con chat</button>
+              <button className={!cfg.chat ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ chat: false })}>Sin chat</button>
+            </div>
+            <span className="etq">Reloj por turno</span>
+            <div className="grupo">
+              {([40, 60, 90] as const).map((s) => (
+                <button key={s} className={cfg.reloj === s ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ reloj: s })}>{s} segundos</button>
+              ))}
+            </div>
+          </div>
+          {esAnfitrion ? (
+            <>
+              <button className="btn" disabled={!todosListos} onClick={iniciar}>Iniciar partida</button>
+              {!todosListos && <p>Para iniciar, todos deben tocar "Estoy listo" (mínimo {MIN_JUGADORES} jugadores).</p>}
+            </>
+          ) : (
+            <p>Esperando que el anfitrión inicie la partida...</p>
           )}
-          <button className="btn sec" onClick={() => setPantalla('tablero')}>Ver tablero de prueba</button>
+          <button className="btn sec" onClick={() => setPantalla('prueba')}>Ver tablero de prueba</button>
           <button className="btn sec" onClick={salir}>Salir de la sala</button>
         </div>
       </div>

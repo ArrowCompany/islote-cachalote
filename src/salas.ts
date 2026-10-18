@@ -2,6 +2,8 @@ import { get, onDisconnect, onValue, ref, runTransaction, set, update } from 'fi
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth, db } from './firebase';
+import { crearEstadoJuego } from './turnos';
+import type { EstadoJuego } from './turnos';
 
 export const COLORES: { id: string; nombre: string; hex: string }[] = [
   { id: 'amarillo', nombre: 'Amarillo', hex: '#f5c400' },
@@ -14,8 +16,20 @@ export const COLORES: { id: string; nombre: string; hex: string }[] = [
   { id: 'naranja', nombre: 'Naranja', hex: '#f77f00' },
 ];
 
+export type Config = { mapa: 'aleatorio' | 'normal'; chat: boolean; reloj: 40 | 60 | 90 };
+export type Partida = { modo: 'p' | 'g'; semilla: number };
 export type Jugador = { nombre: string; color: string; listo: boolean; orden: number; conectado?: boolean };
-export type Sala = { anfitrion: string; estado: string; creada?: number; jugadores?: Record<string, Jugador> };
+export type Sala = {
+  anfitrion: string;
+  estado: string;
+  creada?: number;
+  config?: Config;
+  partida?: Partida;
+  juego?: EstadoJuego;
+  jugadores?: Record<string, Jugador>;
+};
+
+export const CONFIG_INICIAL: Config = { mapa: 'aleatorio', chat: true, reloj: 60 };
 
 export function iniciarSesion(): Promise<User> {
   return new Promise((resolve, reject) => {
@@ -40,6 +54,7 @@ export async function crearSala(uid: string, nombre: string, color: string): Pro
       anfitrion: uid,
       estado: 'espera',
       creada: Date.now(),
+      config: CONFIG_INICIAL,
       jugadores: { [uid]: { nombre, color, listo: false, orden: 0 } },
     };
     await set(r, sala);
@@ -98,6 +113,21 @@ export async function cambiarColor(codigo: string, uid: string, color: string) {
 
 export function marcarListo(codigo: string, uid: string, listo: boolean) {
   return update(ref(db, `salas/${codigo}/jugadores/${uid}`), { listo });
+}
+
+export function guardarConfig(codigo: string, config: Config) {
+  return update(ref(db, 'salas/' + codigo), { config });
+}
+
+export async function iniciarPartida(codigo: string, config: Config, uids: string[]) {
+  const modo: 'p' | 'g' = uids.length >= 5 ? 'g' : 'p';
+  const semilla = config.mapa === 'normal' ? 11 : Math.floor(Math.random() * 2147483646) + 1;
+  await update(ref(db, 'salas/' + codigo), {
+    config,
+    partida: { modo, semilla },
+    juego: crearEstadoJuego(uids),
+    estado: 'jugando',
+  });
 }
 
 export function marcarPresencia(codigo: string, uid: string) {
