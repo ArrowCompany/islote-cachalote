@@ -42,7 +42,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
   const [rodando, setRodando] = useState(false);
   const [azar, setAzar] = useState<[number, number]>([1, 1]);
-  const [restante, setRestante] = useState(reloj);
+    const [restante, setRestante] = useState<number>(reloj);
   const [error, setError] = useState('');
   const tiradaVista = useRef(tirada);
   const disparado = useRef(-1);
