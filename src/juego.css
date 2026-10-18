@@ -1,0 +1,8 @@
+body { display: block; margin: 0; min-width: 0; background: #071d2b; }
+#root { width: 100%; max-width: none; margin: 0; padding: 0; text-align: left; border: 0; }
+.juego { height: 100dvh; display: flex; flex-direction: column; background: #071d2b; color: #f3e6c4; font-family: system-ui, sans-serif; }
+.barra { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 8px; }
+.barra button { font: 600 15px system-ui, sans-serif; padding: 10px 14px; border-radius: 10px; border: 0; background: #f3e6c4; color: #3b2a14; opacity: 0.6; cursor: pointer; }
+.barra button.on { opacity: 1; }
+.visor { flex: 1; overflow: hidden; touch-action: none; display: flex; align-items: center; justify-content: center; }
+.tablero { width: 100%; max-width: 920px; height: auto; transform-origin: center; user-select: none; }
