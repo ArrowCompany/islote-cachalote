@@ -223,7 +223,7 @@ function ponerPoblado(ctx: Contexto, uid: string, v: string) {
   j.poblados[v] = { uid, tipo: 'poblado' };
   j.ultimoPoblado = v;
   j.subpaso = 'camino';
-  j.stats[uid].puntos += 1;
+  recalcularPuntos(j);
   if (j.paso >= j.orden.length) darRecursos(ctx, uid, recursosDeVertice(ctx.mapa, ctx.geo, v));
 }
 
@@ -250,6 +250,88 @@ export function colocarCamino(s: SalaJuego, uid: string, numTurno: number, e: st
   if (j.fase !== 'colocacion' || j.numTurno !== numTurno || j.subpaso !== 'camino' || jugadorActual(j) !== uid) return false;
   if (!j.ultimoPoblado || !caminosDePoblado(geo, j.caminos, j.ultimoPoblado).includes(e)) return false;
   ponerCamino(ctx, uid, e, ahora);
+  return true;
+}
+
+
+export type TipoPieza = 'camino' | 'poblado' | 'ciudad';
+export const COSTO: Record<TipoPieza, Partial<Recursos>> = {
+  camino: { wood: 1, brick: 1 },
+  poblado: { wood: 1, brick: 1, wool: 1, grain: 1 },
+  ciudad: { grain: 2, ore: 3 },
+};
+export const LIMITE: Record<TipoPieza, number> = { camino: 15, poblado: 5, ciudad: 4 };
+
+export function puedePagar(mano: Recursos, tipo: TipoPieza): boolean {
+  return RECURSOS.every((r) => (mano[r] ?? 0) >= (COSTO[tipo][r] ?? 0));
+}
+
+export function contarPiezas(j: EstadoJuego, uid: string): Record<TipoPieza, number> {
+  const c: Record<TipoPieza, number> = { camino: 0, poblado: 0, ciudad: 0 };
+  Object.values(j.caminos).forEach((d) => {
+    if (d === uid) c.camino += 1;
+  });
+  Object.values(j.poblados).forEach((p) => {
+    if (p.uid === uid) c[p.tipo] += 1;
+  });
+  return c;
+}
+
+export function recalcularPuntos(j: EstadoJuego) {
+  Object.keys(j.stats).forEach((uid) => {
+    const c = contarPiezas(j, uid);
+    j.stats[uid].puntos = c.poblado + c.ciudad * 2;
+  });
+}
+
+function caminoPropioEn(geo: Geometria, caminos: Record<string, string>, uid: string, v: string): boolean {
+  return (geo.vertices[v]?.aristas ?? []).some((e) => caminos[e] === uid);
+}
+
+export function verticesPoblado(geo: Geometria, j: EstadoJuego, uid: string): string[] {
+  return verticesLibres(geo, j.poblados).filter((v) => caminoPropioEn(geo, j.caminos, uid, v));
+}
+
+export function verticesCiudad(j: EstadoJuego, uid: string): string[] {
+  return Object.entries(j.poblados).filter(([, p]) => p.uid === uid && p.tipo === 'poblado').map(([v]) => v);
+}
+
+export function caminosDisponibles(geo: Geometria, j: EstadoJuego, uid: string): string[] {
+  const conecta = (v: string) => {
+    const p = j.poblados[v];
+    if (p) return p.uid === uid;
+    return caminoPropioEn(geo, j.caminos, uid, v);
+  };
+  return geo.listaA.filter((a) => !j.caminos[a.id] && (conecta(a.a) || conecta(a.b))).map((a) => a.id);
+}
+
+export function lugaresPara(geo: Geometria, j: EstadoJuego, uid: string, tipo: TipoPieza): string[] {
+  if (tipo === 'camino') return caminosDisponibles(geo, j, uid);
+  if (tipo === 'poblado') return verticesPoblado(geo, j, uid);
+  return verticesCiudad(j, uid);
+}
+
+export function construir(s: SalaJuego, uid: string, numTurno: number, tipo: TipoPieza, id: string): boolean {
+  const ctx = contexto(s);
+  if (!ctx) return false;
+  const { j, geo } = ctx;
+  if (j.fase !== 'accion' || j.numTurno !== numTurno || jugadorActual(j) !== uid) return false;
+  const mano = { ...manoVacia(), ...(s.manos![uid] ?? {}) };
+  if (!puedePagar(mano, tipo)) return false;
+  const c = contarPiezas(j, uid);
+  const hay = tipo === 'ciudad' ? c.ciudad : c[tipo];
+  if (hay >= LIMITE[tipo]) return false;
+  if (!lugaresPara(geo, j, uid, tipo).includes(id)) return false;
+  RECURSOS.forEach((r) => {
+    mano[r] -= COSTO[tipo][r] ?? 0;
+  });
+  s.manos![uid] = mano;
+  j.stats[uid].cartas = totalCartas(mano);
+  if (tipo === 'camino') j.caminos[id] = uid;
+  else j.poblados[id] = { uid, tipo };
+  recalcularPuntos(j);
+  const que = tipo === 'camino' ? 'un camino' : tipo === 'poblado' ? 'un poblado' : 'una ciudad';
+  j.aviso = nombreDe(s, uid) + ' construyó ' + que;
   return true;
 }
 

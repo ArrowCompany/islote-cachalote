@@ -2,6 +2,7 @@ import { onValue, ref, runTransaction } from 'firebase/database';
 import { db } from './firebase';
 import {
   colocarCamino,
+  construir,
   colocarPoblado,
   crearEstadoJuego as crearEstado,
   lanzarOrden,
@@ -9,7 +10,7 @@ import {
   tiempoAgotadoEn,
   tirarPrincipal,
 } from './reglas';
-import type { EstadoJuego, SalaJuego } from './reglas';
+import type { EstadoJuego, SalaJuego, TipoPieza } from './reglas';
 
 export type { EstadoJuego, Fase, Estadisticas, Recursos, Pieza } from './reglas';
 
@@ -47,3 +48,6 @@ export const terminarTurno = (codigo: string, uid: string, numTurno: number) =>
 
 export const tiempoAgotado = (codigo: string, numTurno: number) =>
   aplicar(codigo, (s) => tiempoAgotadoEn(s, numTurno, ahoraServidor()));
+
+export const construirPieza = (codigo: string, uid: string, numTurno: number, tipo: TipoPieza, id: string) =>
+  aplicar(codigo, (s) => construir(s, uid, numTurno, tipo, id));

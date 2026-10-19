@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { COLORES } from './salas';
 import type { Sala } from './salas';
-import { ahoraServidor, lanzarDadosOrden, ponerCamino, ponerPoblado, terminarTurno, tiempoAgotado, tirarDados } from './turnos';
-import { NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, jugadorActual, manoVacia, pendientesOrden, verticesLibres } from './reglas';
-import type { Recurso } from './reglas';
+import { ahoraServidor, construirPieza, lanzarDadosOrden, ponerCamino, ponerPoblado, terminarTurno, tiempoAgotado, tirarDados } from './turnos';
+import { COSTO, LIMITE, NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, contarPiezas, jugadorActual, lugaresPara, manoVacia, pendientesOrden, puedePagar, verticesLibres } from './reglas';
+import type { Recurso, TipoPieza } from './reglas';
 import { COLOR, ballena, geometriaDe, posicion } from './tablero';
 import Juego from './Juego';
 import './partida.css';
 
 type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void };
+type Panel = 'ninguno' | 'jugadores' | 'chat';
 
 const PUNTOS: Record<number, number[]> = {
   1: [4],
@@ -36,28 +37,132 @@ function Dado({ valor, rodando }: { valor: number; rodando: boolean }) {
   );
 }
 
-function Icono({ tipo }: { tipo: Recurso }) {
-  const glifo: Record<Recurso, ReactNode> = {
-    wood: <path d="M-12 8L-5 -8L2 8ZM-2 8L5 -4L12 8Z" fill="#0e5f4e" />,
+function IconoRecurso({ tipo }: { tipo: Recurso }) {
+  const dibujo: Record<Recurso, ReactNode> = {
+    wood: (
+      <g strokeWidth="1.5" stroke="#5a3b1e">
+        <rect x="3" y="28" width="32" height="11" rx="5.5" fill="#8a5a2b" />
+        <circle cx="33" cy="33.5" r="5.5" fill="#ecc88e" />
+        <circle cx="33" cy="33.5" r="2.2" fill="none" stroke="#b98a4a" />
+        <rect x="9" y="16" width="32" height="11" rx="5.5" fill="#a06a33" />
+        <circle cx="39" cy="21.5" r="5.5" fill="#f3d9a6" />
+        <circle cx="39" cy="21.5" r="2.2" fill="none" stroke="#b98a4a" />
+        <rect x="5" y="5" width="30" height="10" rx="5" fill="#8a5a2b" />
+        <circle cx="33" cy="10" r="5" fill="#ecc88e" />
+      </g>
+    ),
     brick: (
-      <g fill="#fff3f6" stroke="#8a2a48" strokeWidth="1">
-        <rect x="-11" y="-8" width="12" height="7" />
-        <rect x="-1" y="1" width="12" height="7" />
+      <g strokeWidth="1.5" stroke="#7a1f1a">
+        <rect x="3" y="30" width="20" height="11" rx="2" fill="#d6453d" />
+        <rect x="25" y="30" width="20" height="11" rx="2" fill="#c93a32" />
+        <rect x="14" y="18" width="20" height="11" rx="2" fill="#e0574e" />
+        <rect x="14" y="6" width="20" height="11" rx="2" fill="#d6453d" />
+        <path d="M6 33h14M28 33h14M17 21h14M17 9h14" stroke="#f4a29b" strokeWidth="1.5" />
       </g>
     ),
     wool: (
-      <g fill="#fffdf4" stroke="#5f8a2a" strokeWidth="1">
-        <circle cx="-3" cy="0" r="6" />
-        <circle cx="4" cy="1" r="5" />
+      <g>
+        <path d="M15 36v8M31 36v8" stroke="#3b2a14" strokeWidth="3.5" strokeLinecap="round" />
+        <g fill="#fffdf4" stroke="#b8c0a0" strokeWidth="1.2">
+          <circle cx="16" cy="24" r="10" />
+          <circle cx="27" cy="21" r="10" />
+          <circle cx="23" cy="31" r="9" />
+        </g>
+        <ellipse cx="39" cy="26" rx="5.5" ry="6.5" fill="#3b2a14" />
+        <circle cx="40" cy="24" r="1.3" fill="#fffdf4" />
       </g>
     ),
-    grain: <path d="M-7 9V-6M0 9V-9M7 9V-6" stroke="#8a5f00" strokeWidth="2.4" fill="none" strokeLinecap="round" />,
-    ore: <path d="M-12 9L-4 -8L3 9ZM-1 9L6 -3L12 9Z" fill="#fff7e0" stroke="#4d3f95" strokeWidth="1" />,
+    grain: (
+      <g>
+        <path d="M24 45V13" stroke="#9a7a1c" strokeWidth="2.6" strokeLinecap="round" />
+        <g fill="#f2c23c" stroke="#b98a14" strokeWidth="1">
+          <ellipse cx="24" cy="7" rx="3.6" ry="6" />
+          <ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)" />
+          <ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)" />
+          <ellipse cx="17" cy="26" rx="3.6" ry="6.5" transform="rotate(-28 17 26)" />
+          <ellipse cx="31" cy="26" rx="3.6" ry="6.5" transform="rotate(28 31 26)" />
+          <ellipse cx="18" cy="37" rx="3.6" ry="6" transform="rotate(-28 18 37)" />
+          <ellipse cx="30" cy="37" rx="3.6" ry="6" transform="rotate(28 30 37)" />
+        </g>
+      </g>
+    ),
+    ore: (
+      <g strokeWidth="1.5" stroke="#5c6275">
+        <path d="M4 38L11 24H37L44 38Z" fill="#b8bcc7" />
+        <path d="M4 38H44V44H4Z" fill="#8b90a0" />
+        <path d="M13 24L18 14H30L35 24Z" fill="#d9dde6" />
+        <path d="M18 14L22 8H26L30 14Z" fill="#eef0f5" />
+      </g>
+    ),
   };
   return (
-    <svg viewBox="-20 -20 40 40" width="30" height="30">
-      <circle r="19" fill={COLOR[tipo]} stroke="#ffffff" strokeWidth="2" />
-      {glifo[tipo]}
+    <svg className="icono-rec" viewBox="0 0 48 48" aria-hidden="true">
+      {dibujo[tipo]}
+    </svg>
+  );
+}
+
+function oscurecer(hex: string, f: number) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0');
+  return '#' + c((n >> 16) & 255) + c((n >> 8) & 255) + c(n & 255);
+}
+
+function listones(x1: number, y1: number, x2: number, y2: number, k: number) {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+  const px = (-dy / L) * 3.3 * k, py = (dx / L) * 3.3 * k;
+  let d = '';
+  for (let i = 1; i < 6; i++) {
+    const cx = x1 + (dx * i) / 6, cy = y1 + (dy * i) / 6;
+    d += 'M' + (cx + px).toFixed(1) + ' ' + (cy + py).toFixed(1) + 'L' + (cx - px).toFixed(1) + ' ' + (cy - py).toFixed(1);
+  }
+  return d;
+}
+
+function FormaPoblado({ color }: { color: string }) {
+  return (
+    <g stroke="#ffffff" strokeWidth={2.4} strokeLinejoin="round">
+      <rect x={-9} y={-3} width={18} height={12} fill={color} />
+      <path d="M-12.5 -3L0 -15.5L12.5 -3Z" fill={oscurecer(color, 0.62)} />
+      <rect x={-2.6} y={3} width={5.2} height={6} fill="#1b1b1b" stroke="none" opacity={0.6} />
+    </g>
+  );
+}
+
+function FormaCiudad({ color }: { color: string }) {
+  const techo = oscurecer(color, 0.62);
+  return (
+    <g stroke="#ffffff" strokeWidth={2.4} strokeLinejoin="round">
+      <rect x={-4} y={-4} width={19} height={14} fill={color} />
+      <path d="M-6 -4L5.5 -14L17 -4Z" fill={techo} />
+      <rect x={-16} y={-12} width={12} height={22} fill={color} />
+      <path d="M-18.5 -12L-10 -23L-1.5 -12Z" fill={techo} />
+      <rect x={7} y={3} width={4.4} height={7} fill="#1b1b1b" stroke="none" opacity={0.6} />
+      <rect x={-12} y={-6} width={4} height={5} fill="#fff7e0" stroke="none" opacity={0.85} />
+    </g>
+  );
+}
+
+function IconoChat() {
+  return (
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+      <path d="M4 5h24a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H15l-7 6v-6H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" fill="#ffffff" />
+      <circle cx="10" cy="14" r="2" fill="#333333" />
+      <circle cx="16" cy="14" r="2" fill="#333333" />
+      <circle cx="22" cy="14" r="2" fill="#333333" />
+    </svg>
+  );
+}
+
+function IconoJugadores() {
+  return (
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+      <g fill="#ffffff">
+        <circle cx="11" cy="10" r="5" />
+        <path d="M1 27a10 10 0 0 1 20 0z" />
+        <circle cx="23" cy="11" r="4.2" />
+        <path d="M17 27a8 8 0 0 1 14 0z" />
+      </g>
     </svg>
   );
 }
@@ -70,6 +175,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const geo = useMemo(() => (modo && semilla !== undefined ? geometriaDe(modo, semilla) : null), [modo, semilla]);
   const hayJuego = !!juego && !!partida;
   const reloj = sala.config?.reloj ?? 60;
+  const hayChat = sala.config?.chat !== false;
   const tirada = juego?.tirada ?? 0;
   const inicio = juego?.inicioTurno ?? 0;
   const numTurno = juego?.numTurno ?? 0;
@@ -81,6 +187,9 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [azar, setAzar] = useState<[number, number]>([1, 1]);
   const [restante, setRestante] = useState<number>(reloj);
   const [error, setError] = useState('');
+  const [panel, setPanel] = useState<Panel>('ninguno');
+  const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
+  const faseActual = juego?.fase;
   const tiradaVista = useRef(tirada);
   const disparado = useRef(-1);
 
@@ -117,6 +226,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     return () => window.clearInterval(t);
   }, [hayJuego, inicio, numTurno, reloj, soyActual, soyAnfitrion, codigo]);
 
+  useEffect(() => {
+    setConstruyendo(null);
+  }, [numTurno, faseActual]);
+
   if (!juego || !partida || !geo) {
     return (
       <div className="partida">
@@ -152,8 +265,16 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const camino = (e: string) => intentar(() => ponerCamino(codigo, uid, numTurno, e), 'No pude poner el camino, intenta otra vez');
 
   const miTurnoColocar = enColocacion && soyActual;
-  const vValidos = miTurnoColocar && juego.subpaso === 'poblado' ? verticesLibres(geo, juego.poblados) : [];
-  const eValidas = miTurnoColocar && juego.subpaso === 'camino' && juego.ultimoPoblado ? caminosDePoblado(geo, juego.caminos, juego.ultimoPoblado) : [];
+  const puedoConstruir = juego.fase === 'accion' && soyActual;
+  const lugares = puedoConstruir && construyendo ? lugaresPara(geo, juego, uid, construyendo) : [];
+  const vValidos = miTurnoColocar && juego.subpaso === 'poblado' ? verticesLibres(geo, juego.poblados) : construyendo && construyendo !== 'camino' ? lugares : [];
+  const eValidas = miTurnoColocar && juego.subpaso === 'camino' && juego.ultimoPoblado ? caminosDePoblado(geo, juego.caminos, juego.ultimoPoblado) : construyendo === 'camino' ? lugares : [];
+  const construirAqui = (id: string) => {
+    const t = construyendo;
+    if (!t) return;
+    setConstruyendo(null);
+    void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
+  };
   const [br, bc] = juego.ladron.split(',').map(Number);
   const [bx, by] = posicion(partida.modo, br, bc);
 
@@ -168,16 +289,18 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           <g key={e} pointerEvents="none">
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#ffffff" strokeWidth={12} strokeLinecap="round" />
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={7} strokeLinecap="round" />
+            <path d={listones(va.x, va.y, vb.x, vb.y, 1)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.4} fill="none" />
           </g>
         );
       })}
       {Object.entries(juego.poblados).map(([v, p]) => {
         const q = geo.vertices[v];
         if (!q) return null;
-        const d = p.tipo === 'ciudad'
-          ? `M${q.x - 13} ${q.y + 10}V${q.y - 1}H${q.x - 3}V${q.y - 10}L${q.x + 3} ${q.y - 15}L${q.x + 9} ${q.y - 10}V${q.y - 1}H${q.x + 13}V${q.y + 10}Z`
-          : `M${q.x - 10} ${q.y + 8}V${q.y - 2}L${q.x} ${q.y - 11}L${q.x + 10} ${q.y - 2}V${q.y + 8}Z`;
-        return <path key={v} d={d} fill={colorJ(p.uid)} stroke="#ffffff" strokeWidth={2.5} strokeLinejoin="round" pointerEvents="none" />;
+        return (
+          <g key={v} transform={`translate(${q.x} ${q.y}) scale(0.95)`} pointerEvents="none">
+            {p.tipo === 'ciudad' ? <FormaCiudad color={colorJ(p.uid)} /> : <FormaPoblado color={colorJ(p.uid)} />}
+          </g>
+        );
       })}
       <g pointerEvents="none" dangerouslySetInnerHTML={{ __html: ballena(bx, by) }} />
       {eValidas.map((e) => {
@@ -185,14 +308,14 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
         return (
-          <g key={e} onClick={() => void camino(e)} style={{ cursor: 'pointer' }}>
+          <g key={e} onClick={() => (miTurnoColocar ? void camino(e) : construirAqui(e))} style={{ cursor: 'pointer' }}>
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="transparent" strokeWidth={24} strokeLinecap="round" />
             <line className="hot-arista" x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} />
           </g>
         );
       })}
       {vValidos.map((v) => (
-        <g key={v} onClick={() => void poner(v)} style={{ cursor: 'pointer' }}>
+        <g key={v} onClick={() => (miTurnoColocar ? void poner(v) : construirAqui(v))} style={{ cursor: 'pointer' }}>
           <circle cx={geo.vertices[v].x} cy={geo.vertices[v].y} r={19} fill="transparent" />
           <circle className="hot" cx={geo.vertices[v].x} cy={geo.vertices[v].y} r={10} />
         </g>
@@ -206,61 +329,122 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     titulo = soyActual
       ? juego.subpaso === 'poblado' ? 'Coloca tu poblado' : 'Coloca tu camino'
       : nombreDe(actualUid) + ' está colocando...';
-  } else titulo = soyActual ? '¡Es tu turno!' : 'Turno de ' + nombreDe(actualUid);
+  } else if (soyActual && construyendo) titulo = 'Toca dónde quieres construir';
+  else titulo = soyActual ? '¡Es tu turno!' : 'Turno de ' + nombreDe(actualUid);
 
   const filasOrden = juego.grupos.flat();
+  const listaJugadores = enOrden ? filasOrden : juego.orden;
+  const alternar = (p: Panel) => setPanel((actual) => (actual === p ? 'ninguno' : p));
 
   return (
     <div className="partida">
-      <div className="cabecera">
-        <button className="salir" onClick={onSalir}>Salir</button>
-        <div className="turno">{titulo}</div>
-        <div className={restante <= 10 ? 'reloj urgente' : 'reloj'}>⏱ {restante}</div>
-      </div>
-      {juego.aviso ? <div className="aviso">{juego.aviso}</div> : null}
-
-      <div className="jugadores">
-        {(enOrden ? filasOrden : juego.orden).map((id, i) => {
-          const e = juego.stats[id] ?? { cartas: 0, desarrollo: 0, caballeros: 0, puntos: 0 };
-          return (
-            <div key={id} className={id === actualUid ? 'jug actual' : 'jug'}>
-              <div className="jug-nombre">
-                <span className="punto" style={{ background: colorJ(id) }} />
-                <span>{enOrden ? '' : i + 1 + '. '}{nombreDe(id)}{id === uid ? ' (tú)' : ''}</span>
-                {sala.jugadores?.[id]?.conectado === false && <span> ⚪</span>}
-              </div>
-              <div className="jug-datos">🃏 {e.cartas} · 🎴 {e.desarrollo} · ⚔️ {e.caballeros} · ⭐ {e.puntos}</div>
+      <div className="escena">
+        {enOrden ? (
+          <div className="orden-caja">
+            <h2>🎲 Por favor lancen sus dados para ver quién va primero</h2>
+            <div className="orden-lista">
+              {filasOrden.map((id) => {
+                const t = juego.tiradasOrden[id];
+                const empatado = pendientes.includes(id);
+                return (
+                  <div key={id} className="orden-fila">
+                    <span className="punto" style={{ background: colorJ(id) }} />
+                    <span className="orden-nombre">{nombreDe(id)}{id === uid ? ' (tú)' : ''}</span>
+                    <span className="orden-valor">{t ? 'saca ' + (t[0] + t[1]) : empatado ? 'esperando...' : '—'}</span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+            <p>El que saque el número más alto va primero. Si hay empate, los empatados vuelven a lanzar.</p>
+            {yoPuedoLanzarOrden && <button className="accion-centro" onClick={() => void lanzarOrden()}>🎲 Lanzar mis dados</button>}
+          </div>
+        ) : (
+          <div className="tablero-caja">
+            <Juego modo={partida.modo} semilla={partida.semilla} overlay={overlay} sinBallena flotante />
+          </div>
+        )}
 
-      {enOrden ? (
-        <div className="orden-caja">
-          <h2>🎲 Por favor lancen sus dados para ver quién va primero</h2>
-          <div className="orden-lista">
-            {filasOrden.map((id) => {
-              const t = juego.tiradasOrden[id];
-              const empatado = pendientes.includes(id);
+        <div className="flot-izq" style={{ background: miColor }}>
+          {hayChat && (
+            <button className={panel === 'chat' ? 'sq on' : 'sq'} onClick={() => alternar('chat')} aria-label="Chat">
+              <IconoChat />
+            </button>
+          )}
+          <button className={panel === 'jugadores' ? 'sq on' : 'sq'} onClick={() => alternar('jugadores')} aria-label="Jugadores">
+            <IconoJugadores />
+          </button>
+        </div>
+
+        <div className="flot-centro">
+          <div className="pildora">
+            <span className="pildora-texto">{titulo}</span>
+            <span className={restante <= 10 ? 'pildora-reloj urgente' : 'pildora-reloj'}>⏱ {restante}</span>
+          </div>
+          {juego.aviso ? <div className="aviso">{juego.aviso}</div> : null}
+        </div>
+
+        <button className="salir flot-der" onClick={onSalir}>Salir</button>
+
+        {panel === 'jugadores' && (
+          <div className="panel panel-jug">
+            <h3>Jugadores</h3>
+            {listaJugadores.map((id, i) => {
+              const e = juego.stats[id] ?? { cartas: 0, desarrollo: 0, caballeros: 0, puntos: 0 };
               return (
-                <div key={id} className="orden-fila">
-                  <span className="punto" style={{ background: colorJ(id) }} />
-                  <span className="orden-nombre">{nombreDe(id)}{id === uid ? ' (tú)' : ''}</span>
-                  <span className="orden-valor">{t ? 'saca ' + (t[0] + t[1]) : empatado ? 'esperando...' : '—'}</span>
+                <div key={id} className={id === actualUid ? 'jug actual' : 'jug'}>
+                  <div className="jug-nombre">
+                    <span className="punto" style={{ background: colorJ(id) }} />
+                    <span>{enOrden ? '' : i + 1 + '. '}{nombreDe(id)}{id === uid ? ' (tú)' : ''}</span>
+                    {sala.jugadores?.[id]?.conectado === false && <span> ⚪</span>}
+                  </div>
+                  <div className="jug-datos">🃏 {e.cartas} · 🎴 {e.desarrollo} · ⚔️ {e.caballeros} · ⭐ {e.puntos}</div>
                 </div>
               );
             })}
           </div>
-          <p>El que saque el número más alto va primero. Si hay empate, los empatados vuelven a lanzar.</p>
-        </div>
-      ) : (
-        <div className="tablero-caja">
-          <Juego modo={partida.modo} semilla={partida.semilla} overlay={overlay} sinBallena />
-        </div>
-      )}
+        )}
+        {puedoConstruir && (
+          <div className="barra-construir">
+            {(['camino', 'poblado', 'ciudad'] as TipoPieza[]).map((t) => {
+              const c = contarPiezas(juego, uid);
+              const quedan = LIMITE[t] - c[t];
+              const hayLugar = lugaresPara(geo, juego, uid, t).length > 0;
+              const ok = puedePagar(mano, t) && quedan > 0 && hayLugar;
+              const nombre = t === 'camino' ? 'Camino' : t === 'poblado' ? 'Poblado' : 'Ciudad';
+              return (
+                <button key={t} className={construyendo === t ? 'cons on' : 'cons'} disabled={!ok} onClick={() => setConstruyendo(construyendo === t ? null : t)}>
+                  <svg viewBox="-20 -25 40 38" width="34" height="32" aria-hidden="true">
+                    {t === 'camino' ? (
+                      <g>
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#ffffff" strokeWidth={12} strokeLinecap="round" />
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke={miColor} strokeWidth={7} strokeLinecap="round" />
+                        <path d={listones(-16, 6, 16, -12, 1)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.4} fill="none" />
+                      </g>
+                    ) : t === 'poblado' ? <FormaPoblado color={miColor} /> : <FormaCiudad color={miColor} />}
+                  </svg>
+                  <span className="nom">{nombre}</span>
+                  <span className="coste">
+                    {RECURSOS.filter((r) => COSTO[t][r]).map((r) => (
+                      <i key={r} style={{ background: COLOR[r] }} title={NOMBRE_RECURSO[r]}>{COSTO[t][r]}</i>
+                    ))}
+                  </span>
+                  <span className="quedan">quedan {quedan}</span>
+                </button>
+              );
+            })}
+            {construyendo && <button className="cons cancelar" onClick={() => setConstruyendo(null)}>✕</button>}
+          </div>
+        )}
+        {panel === 'chat' && hayChat && (
+          <div className="panel panel-chat">
+            <h3>Chat</h3>
+            <p>El chat de grupo llega en una de las siguientes partes.</p>
+          </div>
+        )}
+      </div>
 
       <div className="pie" style={{ background: miColor, color: textoMio }}>
-        <div className="pie-arriba">
+        <div className="pie-izq">
           <div className="dados">
             <Dado valor={valores[0]} rodando={rodando} />
             <Dado valor={valores[1]} rodando={rodando} />
@@ -283,7 +467,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         <div className="recursos">
           {RECURSOS.map((r) => (
             <div key={r} className="rec" title={NOMBRE_RECURSO[r]}>
-              <Icono tipo={r} />
+              <IconoRecurso tipo={r} />
               <b>{mano[r]}</b>
             </div>
           ))}
