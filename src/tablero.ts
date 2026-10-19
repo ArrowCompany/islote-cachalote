@@ -1,6 +1,13 @@
 type Rng = () => number;
-type Celda = [number, number];
+export type Celda = [number, number];
 export type Modo = 'p' | 'g';
+
+export type Hex = { r: number; c: number; x: number; y: number; tipo: string; num: number; idx: number };
+export type Puerto = { tipo: string; mar: Celda; tierra: Celda };
+export type Mapa = { modo: Modo; semilla: number; hexes: Hex[]; desiertos: Celda[]; mar: Celda[]; puertos: Puerto[] };
+export type Vertice = { id: string; x: number; y: number; hexes: Celda[]; vecinos: string[]; aristas: string[] };
+export type Arista = { id: string; a: string; b: string };
+export type Geometria = { vertices: Record<string, Vertice>; aristas: Record<string, Arista>; listaV: Vertice[]; listaA: Arista[] };
 
 const S = 40;
 const W = Math.sqrt(3) * S;
@@ -11,7 +18,7 @@ const TIERRAS: Record<Modo, Record<number, number[]>> = {
   g: { 0: [1, 8, 9], 1: [0, 1, 2, 3, 4, 7, 8], 2: [0, 1, 2, 3, 4, 5, 6, 7], 3: [0, 1, 2, 3, 4, 5], 4: [1, 2, 3, 4, 6], 5: [1] },
   p: { 0: [1, 5], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 2, 3, 4, 5], 3: [0, 1, 2], 4: [1, 2] },
 };
-const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8f7bdc', desert: '#ead9a3' };
+export const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8f7bdc', desert: '#ead9a3' };
 const IN = 'M0 -42L36.4 -21V21L0 42L-36.4 21V-21Z';
 
 const f = (n: number) => n.toFixed(1);
@@ -96,45 +103,42 @@ const D: Record<string, (rn: Rng) => string> = {
   desert: () => '<path d="M-34 12Q-14 -10 10 6Q-10 2 -34 12Z" fill="#d3bd82"/><path d="M-12 28Q10 8 36 16Q16 16 -12 28Z" fill="#d3bd82"/><path d="M-30 -8Q-15 -20 0 -8T30 -8" stroke="#c9b278" stroke-width="1.6" fill="none"/><ellipse cx="-20" cy="16" rx="6" ry="3.5" fill="#a58f5a"/><ellipse cx="22" cy="20" rx="4" ry="2.5" fill="#a58f5a"/><rect x="18" y="-26" width="5" height="17" rx="2.5" fill="#3a8a55"/><rect x="12" y="-21" width="7" height="3" rx="1.5" fill="#3a8a55"/><rect x="22" y="-19" width="6" height="3" rx="1.5" fill="#3a8a55"/>',
 };
 
+const BALLENA = '<g transform="translate(0,2)"><ellipse cx="2" cy="18" rx="36" ry="7" fill="#6b5a2f" opacity=".5"/><path d="M-36 6Q-38 -12 -14 -14Q10 -16 24 -4L35 -18L34 4L40 14L24 9Q8 22 -14 20Q-32 18 -36 6Z" fill="#06222f"/><path d="M-30 -4Q-10 -14 18 -6" stroke="#3b6b82" stroke-width="2" fill="none" opacity=".7"/><path d="M-32 10Q-12 18 12 12" stroke="#7fb0c4" stroke-width="2" fill="none"/><path d="M-27 -2q3 5 0 10M-22 -4q3 6 0 12" stroke="#14455c" stroke-width="1.2" fill="none"/><circle cx="-24" cy="-2" r="2.6" fill="#fff7e0"/><circle cx="-24" cy="-2" r="1.2" fill="#06222f"/><path d="M-20 -14Q-24 -28 -33 -26M-20 -14Q-16 -28 -7 -26M-20 -14V-32" stroke="#5cc8e8" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="-34" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-6" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-20" cy="-36" r="1.8" fill="#bfefff"/></g>';
+
+export function ballena(x: number, y: number): string {
+  return '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + BALLENA + '</g>';
+}
+
 function ficha(t: string, rn: Rng) {
   return '<path d="M0 -34L39.8 -11V35L0 58L-39.8 35V-11Z" fill="#000" opacity=".35"/><path d="M0 -41L39.8 -18V28L0 51L-39.8 28V-18Z" fill="#9c8858"/><path d="M0 -46L39.8 -23V23L0 46L-39.8 23V-23Z" fill="#f3e6c4"/><path d="' + IN + '" fill="' + COLOR[t] + '"/>' + sp(rn, '#000', 40, 0.12) + sp(rn, '#fff', 30, 0.15) + D[t](rn) + '<path d="' + IN + '" fill="url(#sh)"/>';
 }
 
-export function dibujarTablero(modo: Modo, semilla: number = 11): string {
+export function posicion(modo: Modo, r: number, c: number): Celda {
+  const OX = modo === 'g' ? 110 : 255;
+  const OY = modo === 'g' ? 108 : 135;
+  return [OX + c * W + (r & 1 ? W / 2 : 0), OY + r * RH];
+}
+
+function vecinas(r: number, c: number): Celda[] {
+  return r & 1
+    ? [[r, c - 1], [r, c + 1], [r - 1, c], [r - 1, c + 1], [r + 1, c], [r + 1, c + 1]]
+    : [[r, c - 1], [r, c + 1], [r - 1, c - 1], [r - 1, c], [r + 1, c - 1], [r + 1, c]];
+}
+
+export function generarMapa(modo: Modo, semilla: number = 11): Mapa {
   const grande = modo === 'g';
   const tierra = TIERRAS[modo];
-  const OX = grande ? 110 : 255;
-  const OY = grande ? 108 : 135;
   const esT = (r: number, c: number) => (tierra[r] ?? []).includes(c);
-  const pos = (r: number, c: number): Celda => [OX + c * W + (r & 1 ? W / 2 : 0), OY + r * RH];
-  const vec = (r: number, c: number): Celda[] =>
-    r & 1
-      ? [[r, c - 1], [r, c + 1], [r - 1, c], [r - 1, c + 1], [r + 1, c], [r + 1, c + 1]]
-      : [[r, c - 1], [r, c + 1], [r - 1, c - 1], [r - 1, c], [r + 1, c - 1], [r + 1, c]];
-
-  let o = '<defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11567a"/><stop offset="1" stop-color="#06202e"/></linearGradient></defs>';
-  o += '<rect width="860" height="670" rx="18" fill="url(#bg)"/>';
 
   const mar = new Map<string, Celda>();
   const lista: Celda[] = [];
   for (let r = 0; r < 6; r++) {
     (tierra[r] ?? []).forEach((c) => {
       lista.push([r, c]);
-      vec(r, c).forEach((n) => { if (!esT(n[0], n[1])) mar.set(n[0] + ',' + n[1], n); });
+      vecinas(r, c).forEach((n) => { if (!esT(n[0], n[1])) mar.set(n[0] + ',' + n[1], n); });
     });
   }
   const claves = [...mar.keys()];
-  const wr = mk(5);
-  claves.forEach((k2) => {
-    const n = mar.get(k2)!;
-    const [x, y] = pos(n[0], n[1]);
-    const a = (wr() - 0.5) * 10;
-    o += '<path d="' + hp(x, y, S) + '" fill="#1a6e8e" stroke="#0b3a52" stroke-width="2"/><path d="M' + f(x - 22 + a) + ' ' + f(y - 10) + 'q7 -6 14 0t14 0t14 0M' + f(x - 18 - a) + ' ' + f(y + 10) + 'q7 -6 14 0t14 0" stroke="#8fd3e8" stroke-width="2" fill="none" opacity=".55"/><path d="M' + f(x + 4 + a) + ' ' + f(y + 22) + 'h10" stroke="#fff" stroke-width="2" opacity=".5"/>';
-  });
-  lista.forEach(([r, c]) => {
-    const [x, y] = pos(r, c);
-    o += '<path d="' + hp(x, y, S + 4) + '" fill="none" stroke="#d8f4ff" stroke-width="5" opacity=".35"/>';
-  });
 
   let seed = semilla;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -146,7 +150,7 @@ export function dibujarTablero(modo: Modo, semilla: number = 11): string {
   }
   const desiertos: Celda[] = [candidatas[0]];
   if (grande) {
-    const vecinos = vec(candidatas[0][0], candidatas[0][1]).map(([vr, vc]) => vr + ',' + vc);
+    const vecinos = vecinas(candidatas[0][0], candidatas[0][1]).map(([vr, vc]) => vr + ',' + vc);
     const segundo = candidatas.slice(1).find(([r, c]) => !vecinos.includes(r + ',' + c));
     if (segundo) desiertos.push(segundo);
   }
@@ -175,7 +179,7 @@ export function dibujarTablero(modo: Modo, semilla: number = 11): string {
       [nums[i], nums[j]] = [nums[j], nums[i]];
     }
     const mal = celdasRec.some(([r, c], i) =>
-      esRojo(nums[i]) && vec(r, c).some(([vr, vc]) => {
+      esRojo(nums[i]) && vecinas(r, c).some(([vr, vc]) => {
         const j = indice.get(vr + ',' + vc);
         return j !== undefined && esRojo(nums[j]);
       })
@@ -183,31 +187,23 @@ export function dibujarTablero(modo: Modo, semilla: number = 11): string {
     if (!mal) break;
   }
 
-  const txt = 'font-family:system-ui,sans-serif;font-weight:600;text-anchor:middle;';
-  let k = 0, ti = 0, fichas = '';
-  lista.forEach(([r, c]) => {
-    const [x, y] = pos(r, c);
-    const rn = mk(100 + ti++ * 7 + (semilla % 1000));
-    const iDes = desiertos.findIndex(([dr, dc]) => dr === r && dc === c);
-    if (iDes >= 0) {
-      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha('desert', rn) + (iDes === 0 ? '<g transform="translate(0,2)"><ellipse cx="2" cy="18" rx="36" ry="7" fill="#6b5a2f" opacity=".5"/><path d="M-36 6Q-38 -12 -14 -14Q10 -16 24 -4L35 -18L34 4L40 14L24 9Q8 22 -14 20Q-32 18 -36 6Z" fill="#06222f"/><path d="M-30 -4Q-10 -14 18 -6" stroke="#3b6b82" stroke-width="2" fill="none" opacity=".7"/><path d="M-32 10Q-12 18 12 12" stroke="#7fb0c4" stroke-width="2" fill="none"/><path d="M-27 -2q3 5 0 10M-22 -4q3 6 0 12" stroke="#14455c" stroke-width="1.2" fill="none"/><circle cx="-24" cy="-2" r="2.6" fill="#fff7e0"/><circle cx="-24" cy="-2" r="1.2" fill="#06222f"/><path d="M-20 -14Q-24 -28 -33 -26M-20 -14Q-16 -28 -7 -26M-20 -14V-32" stroke="#5cc8e8" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="-34" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-6" cy="-30" r="1.8" fill="#bfefff"/><circle cx="-20" cy="-36" r="1.8" fill="#bfefff"/></g>' : '') + '</g>';
+  const hexes: Hex[] = [];
+  let k = 0;
+  lista.forEach(([r, c], idx) => {
+    const [x, y] = posicion(modo, r, c);
+    if (desiertos.some(([dr, dc]) => dr === r && dc === c)) {
+      hexes.push({ r, c, x, y, tipo: 'desert', num: 0, idx });
     } else {
-      const tp = tipos[k], n = nums[k];
-      const rojo = esRojo(n);
+      hexes.push({ r, c, x, y, tipo: tipos[k], num: nums[k], idx });
       k++;
-      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha(tp, rn) + '</g>';
-      fichas += '<circle cx="' + f(x + 1) + '" cy="' + f(y + 3) + '" r="17" fill="#000" opacity=".3"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="17" fill="#fff3d6" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="14" fill="none" stroke="#d9c08a" stroke-width=".8"/><text x="' + f(x) + '" y="' + f(y + 3) + '" style="' + txt + 'font-size:18px;fill:' + (rojo ? '#c0392b' : '#3b2a14') + '">' + n + '</text>';
-      const d = 6 - Math.abs(7 - n);
-      for (let q = 0; q < d; q++) fichas += '<circle cx="' + f(x + (q - (d - 1) / 2) * 4.4) + '" cy="' + f(y + 11) + '" r="1.5" fill="' + (rojo ? '#c0392b' : '#3b2a14') + '"/>';
     }
   });
-  o += fichas;
 
   let cx = 0, cy = 0;
-  lista.forEach(([r, c]) => { const p = pos(r, c); cx += p[0]; cy += p[1]; });
+  lista.forEach(([r, c]) => { const p = posicion(modo, r, c); cx += p[0]; cy += p[1]; });
   cx /= lista.length; cy /= lista.length;
   const arr = claves
-    .map((q) => { const n = mar.get(q)!; const p = pos(n[0], n[1]); return { n, x: p[0], y: p[1], a: Math.atan2(p[1] - cy, p[0] - cx) }; })
+    .map((q) => { const n = mar.get(q)!; const p = posicion(modo, n[0], n[1]); return { n, a: Math.atan2(p[1] - cy, p[0] - cx) }; })
     .sort((a, b) => a.a - b.a);
   const tiposPuerto = grande
     ? ['3', 'wood', '3', 'brick', '3', 'wool', '3', 'grain', 'ore', '3', 'wool']
@@ -216,38 +212,153 @@ export function dibujarTablero(modo: Modo, semilla: number = 11): string {
     const j = Math.floor(rnd() * (i + 1));
     [tiposPuerto[i], tiposPuerto[j]] = [tiposPuerto[j], tiposPuerto[i]];
   }
-  let etiquetas = '';
-  tiposPuerto.forEach((kd, i) => {
+  const puertos: Puerto[] = [];
+  tiposPuerto.forEach((tipo, i) => {
     const q = arr[Math.floor(((i + 0.5) * arr.length) / tiposPuerto.length)];
-    const lt = vec(q.n[0], q.n[1]).find((m) => esT(m[0], m[1]));
+    const lt = vecinas(q.n[0], q.n[1]).find((m) => esT(m[0], m[1]));
     if (!lt) return;
-    const lp = pos(lt[0], lt[1]);
-    const dx = lp[0] - q.x, dy = lp[1] - q.y;
+    puertos.push({ tipo, mar: q.n, tierra: lt });
+  });
+
+  return { modo, semilla, hexes, desiertos, mar: claves.map((q) => mar.get(q)!), puertos };
+}
+
+const cacheMapa = new Map<string, Mapa>();
+export function mapaDe(modo: Modo, semilla: number): Mapa {
+  const clave = modo + '-' + semilla;
+  let m = cacheMapa.get(clave);
+  if (!m) {
+    m = generarMapa(modo, semilla);
+    cacheMapa.set(clave, m);
+  }
+  return m;
+}
+
+export function geometria(mapa: Mapa): Geometria {
+  const temp = new Map<string, { x: number; y: number; hexes: Celda[]; vec: Set<string> }>();
+  const aris = new Set<string>();
+  mapa.hexes.forEach((h) => {
+    const claves: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = ((60 * i - 30) * Math.PI) / 180;
+      const x = h.x + S * Math.cos(a), y = h.y + S * Math.sin(a);
+      const k = x.toFixed(1) + ',' + y.toFixed(1);
+      let t = temp.get(k);
+      if (!t) {
+        t = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, hexes: [], vec: new Set<string>() };
+        temp.set(k, t);
+      }
+      t.hexes.push([h.r, h.c]);
+      claves.push(k);
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = claves[i], b = claves[(i + 1) % 6];
+      aris.add(a < b ? a + '|' + b : b + '|' + a);
+      temp.get(a)!.vec.add(b);
+      temp.get(b)!.vec.add(a);
+    }
+  });
+  const ordenados = [...temp.entries()].sort((p, q) => p[1].y - q[1].y || p[1].x - q[1].x);
+  const idDe = new Map<string, string>();
+  ordenados.forEach(([k], i) => idDe.set(k, 'v' + i));
+  const vertices: Record<string, Vertice> = {};
+  const listaV: Vertice[] = [];
+  ordenados.forEach(([k, t]) => {
+    const id = idDe.get(k)!;
+    const v: Vertice = { id, x: t.x, y: t.y, hexes: t.hexes, vecinos: [...t.vec].map((q) => idDe.get(q)!), aristas: [] };
+    vertices[id] = v;
+    listaV.push(v);
+  });
+  const aristas: Record<string, Arista> = {};
+  const listaA: Arista[] = [];
+  [...aris].forEach((par) => {
+    const [ka, kb] = par.split('|');
+    const ia = idDe.get(ka)!, ib = idDe.get(kb)!;
+    const na = Number(ia.slice(1)), nb = Number(ib.slice(1));
+    const [lo, hi] = na < nb ? [ia, ib] : [ib, ia];
+    const id = 'e' + lo.slice(1) + '_' + hi.slice(1);
+    const ar: Arista = { id, a: lo, b: hi };
+    aristas[id] = ar;
+    listaA.push(ar);
+    vertices[lo].aristas.push(id);
+    vertices[hi].aristas.push(id);
+  });
+  return { vertices, aristas, listaV, listaA };
+}
+
+const cacheGeo = new Map<string, Geometria>();
+export function geometriaDe(modo: Modo, semilla: number): Geometria {
+  const clave = modo + '-' + semilla;
+  let g = cacheGeo.get(clave);
+  if (!g) {
+    g = geometria(mapaDe(modo, semilla));
+    cacheGeo.set(clave, g);
+  }
+  return g;
+}
+
+export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boolean = true): string {
+  const mapa = mapaDe(modo, semilla);
+  const txt = 'font-family:system-ui,sans-serif;font-weight:600;text-anchor:middle;';
+
+  let o = '<defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11567a"/><stop offset="1" stop-color="#06202e"/></linearGradient></defs>';
+  o += '<rect width="860" height="670" rx="18" fill="url(#bg)"/>';
+
+  const wr = mk(5);
+  mapa.mar.forEach((n) => {
+    const [x, y] = posicion(modo, n[0], n[1]);
+    const a = (wr() - 0.5) * 10;
+    o += '<path d="' + hp(x, y, S) + '" fill="#1a6e8e" stroke="#0b3a52" stroke-width="2"/><path d="M' + f(x - 22 + a) + ' ' + f(y - 10) + 'q7 -6 14 0t14 0t14 0M' + f(x - 18 - a) + ' ' + f(y + 10) + 'q7 -6 14 0t14 0" stroke="#8fd3e8" stroke-width="2" fill="none" opacity=".55"/><path d="M' + f(x + 4 + a) + ' ' + f(y + 22) + 'h10" stroke="#fff" stroke-width="2" opacity=".5"/>';
+  });
+  mapa.hexes.forEach((h) => {
+    o += '<path d="' + hp(h.x, h.y, S + 4) + '" fill="none" stroke="#d8f4ff" stroke-width="5" opacity=".35"/>';
+  });
+
+  let fichas = '';
+  mapa.hexes.forEach((h) => {
+    const rn = mk(100 + h.idx * 7 + (mapa.semilla % 1000));
+    const x = h.x, y = h.y;
+    if (h.tipo === 'desert') {
+      const primero = mapa.desiertos.length > 0 && mapa.desiertos[0][0] === h.r && mapa.desiertos[0][1] === h.c;
+      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha('desert', rn) + (conBallena && primero ? BALLENA : '') + '</g>';
+    } else {
+      const n = h.num;
+      const rojo = n === 6 || n === 8;
+      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha(h.tipo, rn) + '</g>';
+      fichas += '<circle cx="' + f(x + 1) + '" cy="' + f(y + 3) + '" r="17" fill="#000" opacity=".3"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="17" fill="#fff3d6" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="14" fill="none" stroke="#d9c08a" stroke-width=".8"/><text x="' + f(x) + '" y="' + f(y + 3) + '" style="' + txt + 'font-size:18px;fill:' + (rojo ? '#c0392b' : '#3b2a14') + '">' + n + '</text>';
+      const d = 6 - Math.abs(7 - n);
+      for (let q = 0; q < d; q++) fichas += '<circle cx="' + f(x + (q - (d - 1) / 2) * 4.4) + '" cy="' + f(y + 11) + '" r="1.5" fill="' + (rojo ? '#c0392b' : '#3b2a14') + '"/>';
+    }
+  });
+  o += fichas;
+
+  let etiquetas = '';
+  mapa.puertos.forEach((pu) => {
+    const [qx, qy] = posicion(modo, pu.mar[0], pu.mar[1]);
+    const [lx, ly] = posicion(modo, pu.tierra[0], pu.tierra[1]);
+    const dx = lx - qx, dy = ly - qy;
     const L = Math.sqrt(dx * dx + dy * dy), ux = dx / L, uy = dy / L;
     const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
     let px = -uy, py = ux;
     if (py < 0) { px = -px; py = -py; }
     let tablas = '';
     for (let xx = 6; xx < L * 0.8; xx += 8) tablas += 'M' + xx + ' -7V7';
-    o += '<g transform="translate(' + f(q.x) + ',' + f(q.y) + ') rotate(' + f(ang) + ')"><rect x="-4" y="-7" width="' + f(L * 0.8) + '" height="14" fill="#c8995a" stroke="#6b4423" stroke-width="1.2"/><path d="' + tablas + '" stroke="#8a5a2b" stroke-width="1.2"/><circle cx="-2" cy="-8" r="3" fill="#6b4423"/><circle cx="-2" cy="8" r="3" fill="#6b4423"/></g>';
-    const bx = q.x + px * 22 - ux * 4, by = q.y + py * 22 - uy * 4;
+    o += '<g transform="translate(' + f(qx) + ',' + f(qy) + ') rotate(' + f(ang) + ')"><rect x="-4" y="-7" width="' + f(L * 0.8) + '" height="14" fill="#c8995a" stroke="#6b4423" stroke-width="1.2"/><path d="' + tablas + '" stroke="#8a5a2b" stroke-width="1.2"/><circle cx="-2" cy="-8" r="3" fill="#6b4423"/><circle cx="-2" cy="8" r="3" fill="#6b4423"/></g>';
+    const bx = qx + px * 22 - ux * 4, by = qy + py * 22 - uy * 4;
     o += '<ellipse cx="' + f(bx) + '" cy="' + f(by + 9) + '" rx="14" ry="3" fill="#06202e" opacity=".4"/><path d="M' + f(bx - 13) + ' ' + f(by) + 'L' + f(bx + 13) + ' ' + f(by) + 'L' + f(bx + 9) + ' ' + f(by + 8) + 'L' + f(bx - 9) + ' ' + f(by + 8) + 'Z" fill="#e8607f"/><path d="M' + f(bx) + ' ' + f(by - 20) + 'V' + f(by) + '" stroke="#6b4423" stroke-width="1.6"/><path d="M' + f(bx + 1.5) + ' ' + f(by - 19) + 'L' + f(bx + 12) + ' ' + f(by - 3) + 'L' + f(bx + 1.5) + ' ' + f(by - 3) + 'Z" fill="#fff7e0"/>';
-    const sc = kd === '3' ? '#8a5a2b' : COLOR[kd];
-    const tx = q.x - ux * 24, ty = q.y - uy * 24, dos = kd !== '3';
+    const sc = pu.tipo === '3' ? '#8a5a2b' : COLOR[pu.tipo];
+    const tx = qx - ux * 24, ty = qy - uy * 24, dos = pu.tipo !== '3';
     etiquetas += '<rect x="' + f(tx - 24) + '" y="' + f(ty - 13) + '" width="48" height="26" rx="8" fill="#fff7e0" stroke="' + sc + '" stroke-width="3"/>' + (dos ? '<circle cx="' + f(tx - 12) + '" cy="' + f(ty) + '" r="5.5" fill="' + sc + '"/>' : '') + '<text x="' + f(tx + (dos ? 7 : 0)) + '" y="' + f(ty + 6) + '" style="' + txt + 'font-size:16px;fill:#3b2a14">' + (dos ? '2:1' : '3:1') + '</text>';
   });
   o += etiquetas;
 
-  const s0 = pos(0, 1);
+  const s0 = posicion(modo, 0, 1);
   o += '<g transform="translate(' + f(s0[0] + 9) + ',' + f(s0[1] - 38) + ') scale(2.2)"><path d="M0 0q-2 -9 -9 -8M0 0q2 -9 9 -8M0 0v-10" stroke="#d8f4ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>';
   o += '<text x="430" y="552" style="font-family:Georgia,serif;font-weight:600;text-anchor:middle;font-size:34px;fill:#f3e6c4">Islote Cachalote</text>';
   const leyenda: [string, string][] = [['wood', 'Madera'], ['brick', 'Ladrillo'], ['wool', 'Lana'], ['grain', 'Trigo'], ['ore', 'Mineral']];
   leyenda.forEach(([t, nombre], i) => {
     const x = 110 + i * 130;
     o += '<rect x="' + x + '" y="582" width="18" height="18" rx="4" fill="' + COLOR[t] + '"/><text x="' + (x + 26) + '" y="597" style="font-family:system-ui,sans-serif;font-size:18px;fill:#f3e6c4">' + nombre + '</text>';
-  });
-  ['#ff6b6b', '#2ec4b6', '#9b5de5', '#ffbe0b', '#8ac926', '#f1f1f1'].forEach((col, i) => {
-    o += '<circle cx="' + (310 + i * 48) + '" cy="635" r="14" fill="' + col + '" stroke="#06202e" stroke-width="2"/>';
   });
   return o;
 }

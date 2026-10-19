@@ -3,7 +3,9 @@ import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { crearEstadoJuego } from './turnos';
-import type { EstadoJuego } from './turnos';
+import type { EstadoJuego, Recursos } from './turnos';
+import { manoVacia } from './reglas';
+import { mapaDe } from './tablero';
 
 export const COLORES: { id: string; nombre: string; hex: string }[] = [
   { id: 'amarillo', nombre: 'Amarillo', hex: '#f5c400' },
@@ -26,6 +28,7 @@ export type Sala = {
   config?: Config;
   partida?: Partida;
   juego?: EstadoJuego;
+  manos?: Record<string, Recursos>;
   jugadores?: Record<string, Jugador>;
 };
 
@@ -120,12 +123,23 @@ export function guardarConfig(codigo: string, config: Config) {
 }
 
 export async function iniciarPartida(codigo: string, config: Config, uids: string[]) {
+  const snap = await get(ref(db, 'salas/' + codigo));
+  const actual = snap.val() as Sala | null;
+  const js = actual?.jugadores ?? {};
+  const lista = uids.map((uid) => ({ uid, nombre: js[uid]?.nombre ?? '' }));
   const modo: 'p' | 'g' = uids.length >= 5 ? 'g' : 'p';
   const semilla = config.mapa === 'normal' ? 11 : Math.floor(Math.random() * 2147483646) + 1;
+  const mapa = mapaDe(modo, semilla);
+  const [dr, dc] = mapa.desiertos[0];
+  const manos: Record<string, Recursos> = {};
+  uids.forEach((u) => {
+    manos[u] = manoVacia();
+  });
   await update(ref(db, 'salas/' + codigo), {
     config,
     partida: { modo, semilla },
-    juego: crearEstadoJuego(uids),
+    juego: crearEstadoJuego(lista, dr + ',' + dc),
+    manos,
     estado: 'jugando',
   });
 }

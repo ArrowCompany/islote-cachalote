@@ -1,18 +1,17 @@
 import { onValue, ref, runTransaction } from 'firebase/database';
 import { db } from './firebase';
+import {
+  colocarCamino,
+  colocarPoblado,
+  crearEstadoJuego as crearEstado,
+  lanzarOrden,
+  terminarTurnoEn,
+  tiempoAgotadoEn,
+  tirarPrincipal,
+} from './reglas';
+import type { EstadoJuego, SalaJuego } from './reglas';
 
-export type Fase = 'tirar' | 'accion';
-export type Estadisticas = { cartas: number; desarrollo: number; caballeros: number; puntos: number };
-export type EstadoJuego = {
-  orden: string[];
-  turno: number;
-  numTurno: number;
-  fase: Fase;
-  dados?: [number, number];
-  tirada: number;
-  inicioTurno: number;
-  stats: Record<string, Estadisticas>;
-};
+export type { EstadoJuego, Fase, Estadisticas, Recursos, Pieza } from './reglas';
 
 let desfase = 0;
 onValue(ref(db, '.info/serverTimeOffset'), (s) => {
@@ -20,57 +19,31 @@ onValue(ref(db, '.info/serverTimeOffset'), (s) => {
 });
 export const ahoraServidor = () => Date.now() + desfase;
 
-const dado = () => 1 + Math.floor(Math.random() * 6);
-const refJuego = (codigo: string) => ref(db, `salas/${codigo}/juego`);
-
-function avanzar(j: EstadoJuego, ahora: number) {
-  j.turno = (j.turno + 1) % j.orden.length;
-  j.numTurno += 1;
-  j.fase = 'tirar';
-  j.inicioTurno = ahora;
+export function crearEstadoJuego(jugadores: { uid: string; nombre: string }[], ladron: string): EstadoJuego {
+  return crearEstado(jugadores, ladron, ahoraServidor());
 }
 
-export function crearEstadoJuego(uids: string[]): EstadoJuego {
-  const orden = [...uids];
-  for (let i = orden.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [orden[i], orden[j]] = [orden[j], orden[i]];
-  }
-  const stats: Record<string, Estadisticas> = {};
-  orden.forEach((u) => {
-    stats[u] = { cartas: 0, desarrollo: 0, caballeros: 0, puntos: 0 };
-  });
-  return { orden, turno: 0, numTurno: 0, fase: 'tirar', tirada: 0, inicioTurno: ahoraServidor(), stats };
-}
-
-export async function tirarDados(codigo: string, numTurno: number) {
-  await runTransaction(refJuego(codigo), (j: EstadoJuego | null) => {
-    if (!j || j.numTurno !== numTurno || j.fase !== 'tirar') return;
-    j.dados = [dado(), dado()];
-    j.fase = 'accion';
-    j.tirada = (j.tirada ?? 0) + 1;
-    return j;
+async function aplicar(codigo: string, f: (s: SalaJuego) => boolean) {
+  await runTransaction(ref(db, 'salas/' + codigo), (s: SalaJuego | null) => {
+    if (!s) return s;
+    return f(s) ? s : undefined;
   });
 }
 
-export async function terminarTurno(codigo: string, numTurno: number) {
-  const ahora = ahoraServidor();
-  await runTransaction(refJuego(codigo), (j: EstadoJuego | null) => {
-    if (!j || j.numTurno !== numTurno || j.fase !== 'accion') return;
-    avanzar(j, ahora);
-    return j;
-  });
-}
+export const lanzarDadosOrden = (codigo: string, uid: string, numTurno: number) =>
+  aplicar(codigo, (s) => lanzarOrden(s, uid, numTurno, ahoraServidor()));
 
-export async function tiempoAgotado(codigo: string, numTurno: number) {
-  const ahora = ahoraServidor();
-  await runTransaction(refJuego(codigo), (j: EstadoJuego | null) => {
-    if (!j || j.numTurno !== numTurno) return;
-    if (j.fase === 'tirar') {
-      j.dados = [dado(), dado()];
-      j.tirada = (j.tirada ?? 0) + 1;
-    }
-    avanzar(j, ahora);
-    return j;
-  });
-}
+export const ponerPoblado = (codigo: string, uid: string, numTurno: number, vertice: string) =>
+  aplicar(codigo, (s) => colocarPoblado(s, uid, numTurno, vertice));
+
+export const ponerCamino = (codigo: string, uid: string, numTurno: number, arista: string) =>
+  aplicar(codigo, (s) => colocarCamino(s, uid, numTurno, arista, ahoraServidor()));
+
+export const tirarDados = (codigo: string, uid: string, numTurno: number) =>
+  aplicar(codigo, (s) => tirarPrincipal(s, uid, numTurno));
+
+export const terminarTurno = (codigo: string, uid: string, numTurno: number) =>
+  aplicar(codigo, (s) => terminarTurnoEn(s, uid, numTurno, ahoraServidor()));
+
+export const tiempoAgotado = (codigo: string, numTurno: number) =>
+  aplicar(codigo, (s) => tiempoAgotadoEn(s, numTurno, ahoraServidor()));
