@@ -5,6 +5,7 @@ import { auth, db } from './firebase';
 import { crearEstadoJuego } from './turnos';
 import type { EstadoJuego, Recursos } from './turnos';
 import { manoVacia } from './reglas';
+import type { CartaDes } from './reglas';
 import { mapaDe } from './tablero';
 
 export const COLORES: { id: string; nombre: string; hex: string }[] = [
@@ -29,6 +30,7 @@ export type Sala = {
   partida?: Partida;
   juego?: EstadoJuego;
   manos?: Record<string, Recursos>;
+  cartas?: Record<string, CartaDes[]>;
   jugadores?: Record<string, Jugador>;
 };
 

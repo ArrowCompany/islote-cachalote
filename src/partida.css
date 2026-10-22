@@ -79,3 +79,88 @@
 .cons .quedan { font-size: 11px; opacity: 0.8; }
 .cons.cancelar { min-width: 44px; justify-content: center; font-size: 18px; background: #5a1f2b; }
 @media (max-width: 420px) { .cons { min-width: 76px; padding: 5px 5px; } .cons .nom { font-size: 13px; } }
+
+.modal { position: absolute; inset: 0; z-index: 40; background: rgba(5, 15, 25, 0.84); display: flex; align-items: center; justify-content: center; padding: 8px; box-sizing: border-box; }
+.modal-caja { width: min(780px, 100%); max-height: 100%; overflow: auto; background: #16222e; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 14px; padding: 10px; box-sizing: border-box; color: #ffffff; }
+.modal-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.pestanas { display: flex; flex: 1; min-width: 240px; }
+.pestanas button { flex: 1; font: 700 15px system-ui, sans-serif; padding: 10px 8px; border: 2px solid #3b6b82; background: #101a24; color: #f3e6c4; cursor: pointer; }
+.pestanas button:first-child { border-radius: 10px 0 0 10px; }
+.pestanas button:last-child { border-radius: 0 10px 10px 0; }
+.pestanas button.on { border-color: #f5a623; color: #ffffff; background: #22303d; }
+.bloq { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.bloq input { width: 20px; height: 20px; }
+.cerrar { width: 40px; height: 40px; border-radius: 10px; border: 0; background: #5a1f2b; color: #fff; font-size: 18px; cursor: pointer; }
+.modal-caja h3 { margin: 6px 0; text-align: center; font-size: 18px; color: #ffffff; }
+.fila-cartas { display: flex; align-items: stretch; gap: 8px; margin: 8px 0; overflow-x: auto; padding-bottom: 2px; }
+.etiqueta { flex: none; width: 78px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 700; font-size: 13px; background: #2b3a48; border-radius: 10px; padding: 4px; }
+.carta { flex: 1 0 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 12px; border: 3px solid #ffffff; position: relative; }
+.carta.apagada { opacity: 0.4; }
+.carta .icono-rec { width: 40px; height: 40px; }
+.carta .cnt { font-size: 24px; color: #ffffff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.carta .mm { display: flex; gap: 6px; }
+.carta .mm button { width: 34px; height: 30px; border-radius: 8px; border: 0; background: rgba(0, 0, 0, 0.45); color: #fff; font: 700 20px system-ui, sans-serif; cursor: pointer; padding: 0; }
+.carta .mm button:disabled { opacity: 0.35; cursor: default; }
+.cartab { flex: 1 0 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 12px; border: 3px solid #ffffff; cursor: pointer; color: #ffffff; }
+.cartab .icono-rec { width: 40px; height: 40px; }
+.cartab .cnt { font-size: 22px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.cartab small { font-weight: 700; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.cartab.on { box-shadow: 0 0 0 4px #f5a623; transform: translateY(-2px); }
+.cartab:disabled { opacity: 0.35; cursor: not-allowed; }
+.nota { margin: 6px 0; text-align: center; opacity: 0.9; font-size: 14px; }
+.acc-modal { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.acc-modal button { font: 700 16px system-ui, sans-serif; padding: 11px 16px; border-radius: 12px; border: 0; cursor: pointer; color: #fff; }
+.acc-modal .ok { background: #2e9e44; }
+.acc-modal .no { background: #c0392b; }
+.acc-modal .ojo { background: #f5a623; color: #3b2a14; }
+.acc-modal button:disabled { opacity: 0.4; cursor: not-allowed; }
+.oferta-in { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); z-index: 35; width: min(420px, calc(100% - 16px)); background: rgba(22, 34, 46, 0.97); border: 2px solid #f5a623; border-radius: 14px; padding: 10px; color: #fff; text-align: center; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
+.cants { display: inline-flex; gap: 6px; vertical-align: middle; flex-wrap: wrap; justify-content: center; }
+.cant { display: inline-flex; align-items: center; gap: 2px; }
+.cant .icono-rec { width: 28px; height: 28px; }
+@media (max-width: 620px) { .oferta-in { top: 110px; } .etiqueta { width: 60px; font-size: 12px; } }
+
+.flot-izq .sq { position: relative; }
+.insignia { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; border-radius: 10px; background: #c0392b; color: #fff; font: 700 12px system-ui, sans-serif; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; font-style: normal; }
+.puntos-bar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.pt { display: inline-flex; align-items: center; gap: 4px; background: rgba(11, 47, 68, 0.92); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 999px; padding: 3px 9px; color: #fff; font-size: 14px; }
+.pt.actual { border-color: #f5a623; }
+.pt i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; display: inline-block; }
+.pt b { font-size: 16px; }
+.hot-hex { fill: rgba(255, 255, 255, 0.2); stroke: #ffffff; stroke-width: 4; stroke-dasharray: 10 6; animation: latir 0.9s ease-in-out infinite; }
+.panel-cartas { gap: 8px; }
+.carta-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #0b2f44; border-left: 6px solid #7a859b; }
+.carta-fila b { display: block; color: #fff; }
+.carta-fila small { display: block; opacity: 0.85; }
+.carta-fila .oculta { font-size: 12px; opacity: 0.8; }
+.carta-fila.t-caballero { border-left-color: #c0392b; }
+.carta-fila.t-punto { border-left-color: #f5c400; }
+.carta-fila.t-caminos { border-left-color: #c8995a; }
+.carta-fila.t-abundancia { border-left-color: #2e9e44; }
+.carta-fila.t-monopolio { border-left-color: #7b2cbf; }
+.carta-fila .ok { font: 700 14px system-ui, sans-serif; padding: 8px 12px; border-radius: 10px; border: 0; background: #2e9e44; color: #fff; cursor: pointer; }
+.carta-fila .ok:disabled { opacity: 0.4; cursor: not-allowed; }
+.victimas { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.victima { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 3px solid #fff; background: #0b2f44; color: #fff; font: 600 17px system-ui, sans-serif; cursor: pointer; }
+.victima .punto { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; }
+.victima small { margin-left: auto; opacity: 0.85; }
+.confirma { width: min(560px, 100%); background: #16222e; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 14px; padding: 16px; display: flex; gap: 16px; align-items: center; box-sizing: border-box; color: #fff; }
+.confirma-texto { flex: 1; }
+.confirma-texto h3 { margin: 0 0 8px; color: #f5a623; font-size: 22px; text-align: left; }
+.confirma-texto p { margin: 0 0 8px; }
+.cons-costo { display: flex; gap: 10px; }
+.confirma-botones { display: flex; flex-direction: column; gap: 10px; }
+.confirma-botones button { width: 64px; height: 64px; border-radius: 14px; border: 3px solid rgba(255, 255, 255, 0.6); font-size: 30px; font-weight: 700; color: #fff; cursor: pointer; }
+.confirma-botones .vx { background: #c0392b; }
+.confirma-botones .vv { background: #2e9e44; }
+.carta-grande { width: min(340px, 92%); border-radius: 16px; padding: 20px; text-align: center; color: #1b1b1b; background: #f3e6c4; border: 6px solid #8a5a2b; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; gap: 8px; }
+.carta-grande h3 { margin: 0; font-size: 26px; color: #3b2a14; }
+.carta-grande p { margin: 0; }
+.carta-grande.t-caballero { background: #f3c9c4; }
+.carta-grande.t-punto { background: #fbe9a6; }
+.carta-grande.t-caminos { background: #efd9b4; }
+.carta-grande.t-abundancia { background: #cdeccb; }
+.carta-grande.t-monopolio { background: #e1cff3; }
+.carta-grande .ok { align-self: center; font: 700 17px system-ui, sans-serif; padding: 11px 18px; border-radius: 12px; border: 0; background: #2e9e44; color: #fff; cursor: pointer; }
+.modal-caja.final h2 { color: #f5a623; text-align: center; margin: 4px 0 10px; }
+@media (max-width: 620px) { .puntos-bar { max-width: 100%; } .confirma { flex-direction: column; } .confirma-botones { flex-direction: row; } }

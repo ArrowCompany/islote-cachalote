@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { COLORES } from './salas';
 import type { Sala } from './salas';
-import { ahoraServidor, construirPieza, lanzarDadosOrden, ponerCamino, ponerPoblado, terminarTurno, tiempoAgotado, tirarDados } from './turnos';
-import { COSTO, LIMITE, NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, contarPiezas, jugadorActual, lugaresPara, manoVacia, pendientesOrden, puedePagar, verticesLibres } from './reglas';
-import type { Recurso, TipoPieza } from './reglas';
-import { COLOR, ballena, geometriaDe, posicion } from './tablero';
+import { aceptarCambio, ahoraServidor, bloquearCambios, cambiarConBanco, cancelarCambio, comprarDesarrollo, construirPieza, descartarCartas, lanzarDadosOrden, mandarLadron, ponerCamino, ponerPoblado, proponerCambio, rechazarCambio, robarCartaA, terminarTurno, tiempoAgotado, tirarDados, usarCarta } from './turnos';
+import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, contarPiezas, jugadorActual, lugaresPara, manoVacia, pendientesOrden, puedePagar, puntosTotales, tasasDe, verticesLibres } from './reglas';
+import type { CartaDes, ParamCarta, Recurso, Recursos, TipoPieza } from './reglas';
+import { COLOR, ballena, geometriaDe, mapaDe, posicion } from './tablero';
 import Juego from './Juego';
+import Mesa from './Mesa';
+import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones } from './piezas';
 import './partida.css';
 
 type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void };
-type Panel = 'ninguno' | 'jugadores' | 'chat';
+type Panel = 'ninguno' | 'jugadores' | 'chat' | 'cartas';
+type Pestana = 'jugadores' | 'banco';
 
 const PUNTOS: Record<number, number[]> = {
   1: [4],
@@ -20,6 +22,14 @@ const PUNTOS: Record<number, number[]> = {
   5: [0, 2, 4, 6, 8],
   6: [0, 2, 3, 5, 6, 8],
 };
+function hexPath(x: number, y: number, r: number) {
+  const pts: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = ((60 * i - 30) * Math.PI) / 180;
+    pts.push((x + r * Math.cos(a)).toFixed(1) + ',' + (y + r * Math.sin(a)).toFixed(1));
+  }
+  return 'M' + pts.join('L') + 'Z';
+}
 const dado6 = () => 1 + Math.floor(Math.random() * 6);
 const colorDe = (id: string) => COLORES.find((c) => c.id === id)?.hex ?? '#888888';
 const esClaro = (hex: string) => {
@@ -37,109 +47,32 @@ function Dado({ valor, rodando }: { valor: number; rodando: boolean }) {
   );
 }
 
-function IconoRecurso({ tipo }: { tipo: Recurso }) {
-  const dibujo: Record<Recurso, ReactNode> = {
-    wood: (
-      <g strokeWidth="1.5" stroke="#5a3b1e">
-        <rect x="3" y="28" width="32" height="11" rx="5.5" fill="#8a5a2b" />
-        <circle cx="33" cy="33.5" r="5.5" fill="#ecc88e" />
-        <circle cx="33" cy="33.5" r="2.2" fill="none" stroke="#b98a4a" />
-        <rect x="9" y="16" width="32" height="11" rx="5.5" fill="#a06a33" />
-        <circle cx="39" cy="21.5" r="5.5" fill="#f3d9a6" />
-        <circle cx="39" cy="21.5" r="2.2" fill="none" stroke="#b98a4a" />
-        <rect x="5" y="5" width="30" height="10" rx="5" fill="#8a5a2b" />
-        <circle cx="33" cy="10" r="5" fill="#ecc88e" />
-      </g>
-    ),
-    brick: (
-      <g strokeWidth="1.5" stroke="#7a1f1a">
-        <rect x="3" y="30" width="20" height="11" rx="2" fill="#d6453d" />
-        <rect x="25" y="30" width="20" height="11" rx="2" fill="#c93a32" />
-        <rect x="14" y="18" width="20" height="11" rx="2" fill="#e0574e" />
-        <rect x="14" y="6" width="20" height="11" rx="2" fill="#d6453d" />
-        <path d="M6 33h14M28 33h14M17 21h14M17 9h14" stroke="#f4a29b" strokeWidth="1.5" />
-      </g>
-    ),
-    wool: (
-      <g>
-        <path d="M15 36v8M31 36v8" stroke="#3b2a14" strokeWidth="3.5" strokeLinecap="round" />
-        <g fill="#fffdf4" stroke="#b8c0a0" strokeWidth="1.2">
-          <circle cx="16" cy="24" r="10" />
-          <circle cx="27" cy="21" r="10" />
-          <circle cx="23" cy="31" r="9" />
-        </g>
-        <ellipse cx="39" cy="26" rx="5.5" ry="6.5" fill="#3b2a14" />
-        <circle cx="40" cy="24" r="1.3" fill="#fffdf4" />
-      </g>
-    ),
-    grain: (
-      <g>
-        <path d="M24 45V13" stroke="#9a7a1c" strokeWidth="2.6" strokeLinecap="round" />
-        <g fill="#f2c23c" stroke="#b98a14" strokeWidth="1">
-          <ellipse cx="24" cy="7" rx="3.6" ry="6" />
-          <ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)" />
-          <ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)" />
-          <ellipse cx="17" cy="26" rx="3.6" ry="6.5" transform="rotate(-28 17 26)" />
-          <ellipse cx="31" cy="26" rx="3.6" ry="6.5" transform="rotate(28 31 26)" />
-          <ellipse cx="18" cy="37" rx="3.6" ry="6" transform="rotate(-28 18 37)" />
-          <ellipse cx="30" cy="37" rx="3.6" ry="6" transform="rotate(28 30 37)" />
-        </g>
-      </g>
-    ),
-    ore: (
-      <g strokeWidth="1.5" stroke="#5c6275">
-        <path d="M4 38L11 24H37L44 38Z" fill="#b8bcc7" />
-        <path d="M4 38H44V44H4Z" fill="#8b90a0" />
-        <path d="M13 24L18 14H30L35 24Z" fill="#d9dde6" />
-        <path d="M18 14L22 8H26L30 14Z" fill="#eef0f5" />
-      </g>
-    ),
-  };
+function IconoBolsa() {
   return (
-    <svg className="icono-rec" viewBox="0 0 48 48" aria-hidden="true">
-      {dibujo[tipo]}
+    <svg viewBox="0 0 40 40" width="32" height="32" aria-hidden="true">
+      <path d="M13 6h14l-3 6h-8z" fill="#d9a15b" stroke="#ffffff" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M16 12h8c8 4 11 12 9 20a4 4 0 0 1-4 3H11a4 4 0 0 1-4-3c-2-8 1-16 9-20z" fill="#c98a43" stroke="#ffffff" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M17 23h6M20 20v6" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   );
 }
 
-function oscurecer(hex: string, f: number) {
-  const n = parseInt(hex.slice(1), 16);
-  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0');
-  return '#' + c((n >> 16) & 255) + c((n >> 8) & 255) + c(n & 255);
-}
-
-function listones(x1: number, y1: number, x2: number, y2: number, k: number) {
-  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
-  const px = (-dy / L) * 3.3 * k, py = (dx / L) * 3.3 * k;
-  let d = '';
-  for (let i = 1; i < 6; i++) {
-    const cx = x1 + (dx * i) / 6, cy = y1 + (dy * i) / 6;
-    d += 'M' + (cx + px).toFixed(1) + ' ' + (cy + py).toFixed(1) + 'L' + (cx - px).toFixed(1) + ' ' + (cy - py).toFixed(1);
-  }
-  return d;
-}
-
-function FormaPoblado({ color }: { color: string }) {
+function IconoCartas() {
   return (
-    <g stroke="#ffffff" strokeWidth={2.4} strokeLinejoin="round">
-      <rect x={-9} y={-3} width={18} height={12} fill={color} />
-      <path d="M-12.5 -3L0 -15.5L12.5 -3Z" fill={oscurecer(color, 0.62)} />
-      <rect x={-2.6} y={3} width={5.2} height={6} fill="#1b1b1b" stroke="none" opacity={0.6} />
-    </g>
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+      <rect x="4" y="6" width="17" height="22" rx="3" fill="#cfd6e4" stroke="#ffffff" strokeWidth="1.5" transform="rotate(-10 12 17)" />
+      <rect x="11" y="4" width="17" height="22" rx="3" fill="#ffffff" />
+      <path d="M19.5 10l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#333333" />
+    </svg>
   );
 }
 
-function FormaCiudad({ color }: { color: string }) {
-  const techo = oscurecer(color, 0.62);
+function IconoCarta() {
   return (
-    <g stroke="#ffffff" strokeWidth={2.4} strokeLinejoin="round">
-      <rect x={-4} y={-4} width={19} height={14} fill={color} />
-      <path d="M-6 -4L5.5 -14L17 -4Z" fill={techo} />
-      <rect x={-16} y={-12} width={12} height={22} fill={color} />
-      <path d="M-18.5 -12L-10 -23L-1.5 -12Z" fill={techo} />
-      <rect x={7} y={3} width={4.4} height={7} fill="#1b1b1b" stroke="none" opacity={0.6} />
-      <rect x={-12} y={-6} width={4} height={5} fill="#fff7e0" stroke="none" opacity={0.85} />
-    </g>
+    <svg viewBox="0 0 40 40" width="32" height="32" aria-hidden="true">
+      <rect x="9" y="5" width="22" height="30" rx="4" fill="#7a859b" stroke="#ffffff" strokeWidth="1.8" />
+      <text x="20" y="27" textAnchor="middle" fontSize="20" fontWeight="700" fill="#2c3340">?</text>
+    </svg>
   );
 }
 
@@ -189,6 +122,19 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [error, setError] = useState('');
   const [panel, setPanel] = useState<Panel>('ninguno');
   const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
+  const [cambio, setCambio] = useState(false);
+  const [pestana, setPestana] = useState<Pestana>('jugadores');
+  const [ofDa, setOfDa] = useState<Recursos>(manoVacia());
+  const [ofPide, setOfPide] = useState<Recursos>(manoVacia());
+  const [doy, setDoy] = useState<Recurso | null>(null);
+  const [recibo, setRecibo] = useState<Recurso | null>(null);
+  const [selDescarte, setSelDescarte] = useState<Recursos>(manoVacia());
+  const [confirmarCarta, setConfirmarCarta] = useState(false);
+  const [cartaNueva, setCartaNueva] = useState<CartaDes | null>(null);
+  const [usando, setUsando] = useState<CartaDes | null>(null);
+  const [elegidos, setElegidos] = useState<Recurso[]>([]);
+  const misCartas = sala.cartas?.[uid] ?? [];
+  const cantCartasRef = useRef(misCartas.length);
   const faseActual = juego?.fase;
   const tiradaVista = useRef(tirada);
   const disparado = useRef(-1);
@@ -209,7 +155,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   }, [tirada]);
 
   useEffect(() => {
-    if (!hayJuego) return;
+    if (!hayJuego || faseActual === 'fin') return;
     const revisar = () => {
       const pasado = ahoraServidor() - inicio;
       setRestante(Math.max(0, Math.ceil(reloj - pasado / 1000)));
@@ -224,11 +170,25 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     revisar();
     const t = window.setInterval(revisar, 250);
     return () => window.clearInterval(t);
-  }, [hayJuego, inicio, numTurno, reloj, soyActual, soyAnfitrion, codigo]);
+  }, [hayJuego, faseActual, inicio, numTurno, reloj, soyActual, soyAnfitrion, codigo]);
 
   useEffect(() => {
     setConstruyendo(null);
+    setCambio(false);
+    setOfDa(manoVacia());
+    setOfPide(manoVacia());
+    setDoy(null);
+    setRecibo(null);
+    setSelDescarte(manoVacia());
+    setConfirmarCarta(false);
+    setUsando(null);
+    setElegidos([]);
   }, [numTurno, faseActual]);
+
+  useEffect(() => {
+    if (misCartas.length > cantCartasRef.current) setCartaNueva(misCartas[misCartas.length - 1]);
+    cantCartasRef.current = misCartas.length;
+  }, [misCartas]);
 
   if (!juego || !partida || !geo) {
     return (
@@ -264,13 +224,58 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const poner = (v: string) => intentar(() => ponerPoblado(codigo, uid, numTurno, v), 'No pude poner el poblado, intenta otra vez');
   const camino = (e: string) => intentar(() => ponerCamino(codigo, uid, numTurno, e), 'No pude poner el camino, intenta otra vez');
 
+  const mapa = mapaDe(partida.modo, partida.semilla);
+  const tasas = tasasDe(mapa, geo, juego, uid);
+  const oferta = juego.oferta;
+  const miOferta = oferta && oferta.de === uid ? oferta : null;
+  const bloqueado = !!juego.bloqueos?.[uid];
+  const ofertaEntrante = oferta && oferta.de !== uid && !oferta.rechazos[uid] && !bloqueado && juego.fase === 'accion' ? oferta : null;
+  const suma5 = (c: Recursos) => RECURSOS.reduce((t, r) => t + c[r], 0);
+  const choque = RECURSOS.some((r) => ofDa[r] > 0 && ofPide[r] > 0);
+  const otros = juego.orden.filter((u) => u !== uid);
+  const todosBloquean = otros.every((u) => juego.bloqueos?.[u]);
+  const puedeOfrecer = suma5(ofDa) > 0 && suma5(ofPide) > 0 && !choque && !todosBloquean && !miOferta;
+  const alcanzaOferta = ofertaEntrante ? RECURSOS.every((r) => mano[r] >= (ofertaEntrante.pide[r] ?? 0)) : false;
+  const enviarOferta = () => intentar(() => proponerCambio(codigo, uid, numTurno, ofDa, ofPide), 'No pude enviar la oferta, intenta otra vez');
+  const quitarOferta = () => (oferta ? intentar(() => cancelarCambio(codigo, uid, oferta.id), 'No pude cancelar la oferta') : Promise.resolve());
+  const aceptarOferta = () => (ofertaEntrante ? intentar(() => aceptarCambio(codigo, uid, ofertaEntrante.id), 'No pude aceptar: revisa que tengas las cartas') : Promise.resolve());
+  const rechazarOferta = () => (ofertaEntrante ? intentar(() => rechazarCambio(codigo, uid, ofertaEntrante.id), 'No pude rechazar la oferta') : Promise.resolve());
+  const hacerBanco = () => {
+    if (!doy || !recibo) return;
+    const d = doy, r = recibo;
+    void intentar(() => cambiarConBanco(codigo, uid, numTurno, d, r), 'No pude hacer el cambio con el banco');
+  };
+  const cambiarBloqueo = (v: boolean) => void intentar(() => bloquearCambios(codigo, uid, v), 'No pude cambiar el bloqueo');
   const miTurnoColocar = enColocacion && soyActual;
   const puedoConstruir = juego.fase === 'accion' && soyActual;
-  const lugares = puedoConstruir && construyendo ? lugaresPara(geo, juego, uid, construyendo) : [];
-  const vValidos = miTurnoColocar && juego.subpaso === 'poblado' ? verticesLibres(geo, juego.poblados) : construyendo && construyendo !== 'camino' ? lugares : [];
-  const eValidas = miTurnoColocar && juego.subpaso === 'camino' && juego.ultimoPoblado ? caminosDePoblado(geo, juego.caminos, juego.ultimoPoblado) : construyendo === 'camino' ? lugares : [];
+  const enMover = juego.fase === 'mover';
+  const enRobar = juego.fase === 'robar';
+  const enDescartar = juego.fase === 'descartar';
+  const enFin = juego.fase === 'fin';
+  const gratis = soyActual && juego.caminosGratis > 0 && (juego.fase === 'tirar' || juego.fase === 'accion');
+  const debo = juego.descartes[uid] ?? 0;
+  const lugares = puedoConstruir && construyendo && construyendo !== 'camino' ? lugaresPara(geo, juego, uid, construyendo) : [];
+  const lugaresCamino = gratis || (puedoConstruir && construyendo === 'camino') ? lugaresPara(geo, juego, uid, 'camino') : [];
+  const vValidos = miTurnoColocar && juego.subpaso === 'poblado' ? verticesLibres(geo, juego.poblados) : lugares;
+  const eValidas = miTurnoColocar && juego.subpaso === 'camino' && juego.ultimoPoblado ? caminosDePoblado(geo, juego.caminos, juego.ultimoPoblado) : lugaresCamino;
+  const hexesMover = enMover && soyActual ? mapa.hexes.filter((h) => h.r + ',' + h.c !== juego.ladron) : [];
+  const moverCachalote = (clave: string) => void intentar(() => mandarLadron(codigo, uid, numTurno, clave), 'No pude mover al cachalote, intenta otra vez');
+  const robarAlguien = (v: string) => void intentar(() => robarCartaA(codigo, uid, numTurno, v), 'No pude robar, intenta otra vez');
+  const descartarYa = () => void intentar(() => descartarCartas(codigo, uid, numTurno, selDescarte), 'No pude descartar: revisa la cantidad');
+  const comprarYa = () => {
+    setConfirmarCarta(false);
+    void intentar(() => comprarDesarrollo(codigo, uid, numTurno), 'No pude comprar la carta');
+  };
+  const jugarYa = (c: CartaDes, param: ParamCarta) => {
+    setUsando(null);
+    setElegidos([]);
+    setPanel('ninguno');
+    void intentar(() => usarCarta(codigo, uid, numTurno, c.id, param), 'No pude jugar la carta');
+  };
+  const puedeJugar = (c: CartaDes) => soyActual && (juego.fase === 'tirar' || juego.fase === 'accion') && !juego.jugoCarta && c.tipo !== 'punto' && c.turno < juego.rondaTurno;
+  const alcanzaCarta = RECURSOS.every((r) => mano[r] >= (COSTO_CARTA[r] ?? 0)) && juego.mazo.length > 0;
   const construirAqui = (id: string) => {
-    const t = construyendo;
+    const t = construyendo ?? (gratis ? 'camino' : null);
     if (!t) return;
     setConstruyendo(null);
     void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
@@ -314,6 +319,12 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </g>
         );
       })}
+      {hexesMover.map((h) => (
+        <g key={h.r + ',' + h.c} onClick={() => moverCachalote(h.r + ',' + h.c)} style={{ cursor: 'pointer' }}>
+          <path d={hexPath(h.x, h.y, 40)} fill="rgba(255,255,255,0.08)" />
+          <path className="hot-hex" d={hexPath(h.x, h.y, 34)} />
+        </g>
+      ))}
       {vValidos.map((v) => (
         <g key={v} onClick={() => (miTurnoColocar ? void poner(v) : construirAqui(v))} style={{ cursor: 'pointer' }}>
           <circle cx={geo.vertices[v].x} cy={geo.vertices[v].y} r={19} fill="transparent" />
@@ -329,7 +340,12 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     titulo = soyActual
       ? juego.subpaso === 'poblado' ? 'Coloca tu poblado' : 'Coloca tu camino'
       : nombreDe(actualUid) + ' está colocando...';
-  } else if (soyActual && construyendo) titulo = 'Toca dónde quieres construir';
+  } else if (enFin) titulo = 'Partida terminada';
+  else if (enDescartar) titulo = debo > 0 ? 'Descarta ' + debo + ' cartas' : 'Esperando que descarten...';
+  else if (enMover) titulo = soyActual ? 'Mueve al cachalote: toca un hexágono' : nombreDe(actualUid) + ' mueve al cachalote';
+  else if (enRobar) titulo = soyActual ? 'Elige a quién robar' : nombreDe(actualUid) + ' elige a quién robar';
+  else if (gratis) titulo = 'Construye caminos gratis: faltan ' + juego.caminosGratis;
+  else if (soyActual && construyendo) titulo = 'Toca dónde quieres construir';
   else titulo = soyActual ? '¡Es tu turno!' : 'Turno de ' + nombreDe(actualUid);
 
   const filasOrden = juego.grupos.flat();
@@ -360,7 +376,15 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </div>
         ) : (
           <div className="tablero-caja">
-            <Juego modo={partida.modo} semilla={partida.semilla} overlay={overlay} sinBallena flotante />
+            <Juego
+              modo={partida.modo}
+              semilla={partida.semilla}
+              overlay={overlay}
+              fondo={<Mesa jugadores={juego.orden.map((id) => ({ uid: id, nombre: nombreDe(id), hex: colorJ(id) }))} juego={juego} />}
+              sinBallena
+              flotante
+              mesa
+            />
           </div>
         )}
 
@@ -373,12 +397,26 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           <button className={panel === 'jugadores' ? 'sq on' : 'sq'} onClick={() => alternar('jugadores')} aria-label="Jugadores">
             <IconoJugadores />
           </button>
+          <button className={panel === 'cartas' ? 'sq on' : 'sq'} onClick={() => alternar('cartas')} aria-label="Mis cartas">
+            <IconoCartas />
+            {misCartas.length > 0 && <i className="insignia">{misCartas.length}</i>}
+          </button>
         </div>
 
         <div className="flot-centro">
           <div className="pildora">
             <span className="pildora-texto">{titulo}</span>
             <span className={restante <= 10 ? 'pildora-reloj urgente' : 'pildora-reloj'}>⏱ {restante}</span>
+          </div>
+          <div className="puntos-bar">
+            {juego.orden.map((id) => (
+              <span key={id} className={id === actualUid ? 'pt actual' : 'pt'} title={nombreDe(id)}>
+                <i style={{ background: colorJ(id) }} />
+                <b>{juego.stats[id]?.puntos ?? 0}</b>
+                {juego.camino?.uid === id ? ' 🛣️' : ''}
+                {juego.ejercito?.uid === id ? ' ⚔️' : ''}
+              </span>
+            ))}
           </div>
           {juego.aviso ? <div className="aviso">{juego.aviso}</div> : null}
         </div>
@@ -405,6 +443,21 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         )}
         {puedoConstruir && (
           <div className="barra-construir">
+            <button className="cons" disabled={!alcanzaCarta} onClick={() => setConfirmarCarta(true)}>
+              <IconoCarta />
+              <span className="nom">Carta</span>
+              <span className="coste">
+                {RECURSOS.filter((r) => COSTO_CARTA[r]).map((r) => (
+                  <i key={r} style={{ background: COLOR[r] }} title={NOMBRE_RECURSO[r]}>{COSTO_CARTA[r]}</i>
+                ))}
+              </span>
+              <span className="quedan">mazo {juego.mazo.length}</span>
+            </button>
+            <button className={cambio ? 'cons on' : 'cons'} onClick={() => setCambio((x) => !x)}>
+              <IconoBolsa />
+              <span className="nom">Comerciar</span>
+              <span className="quedan">{miOferta ? 'oferta activa' : 'banco o jugadores'}</span>
+            </button>
             {(['camino', 'poblado', 'ciudad'] as TipoPieza[]).map((t) => {
               const c = contarPiezas(juego, uid);
               const quedan = LIMITE[t] - c[t];
@@ -433,6 +486,254 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               );
             })}
             {construyendo && <button className="cons cancelar" onClick={() => setConstruyendo(null)}>✕</button>}
+          </div>
+        )}
+        {cambio && puedoConstruir && (
+          <div className="modal">
+            <div className="modal-caja">
+              <div className="modal-cab">
+                <div className="pestanas">
+                  <button className={pestana === 'jugadores' ? 'on' : ''} onClick={() => setPestana('jugadores')}>Comercio con jugadores</button>
+                  <button className={pestana === 'banco' ? 'on' : ''} onClick={() => setPestana('banco')}>Comercio con el banco</button>
+                </div>
+                <label className="bloq">
+                  <input type="checkbox" checked={bloqueado} onChange={(e) => cambiarBloqueo(e.target.checked)} /> No recibir ofertas
+                </label>
+                <button className="cerrar" onClick={() => setCambio(false)} aria-label="Cerrar">✕</button>
+              </div>
+              {pestana === 'jugadores' ? (
+                <div>
+                  <h3>Comercio con jugadores</h3>
+                  <div className="fila-cartas">
+                    <div className="etiqueta">Pido a los demás</div>
+                    {RECURSOS.map((r) => (
+                      <Carta key={r} tipo={r} valor={ofPide[r]} max={9} apagada={ofDa[r] > 0} onCambio={(n) => setOfPide({ ...ofPide, [r]: n })} />
+                    ))}
+                  </div>
+                  <div className="fila-cartas">
+                    <div className="etiqueta">Doy yo</div>
+                    {RECURSOS.map((r) => (
+                      <Carta key={r} tipo={r} valor={ofDa[r]} max={mano[r]} apagada={ofPide[r] > 0 || mano[r] === 0} onCambio={(n) => setOfDa({ ...ofDa, [r]: n })} />
+                    ))}
+                  </div>
+                  {choque && <p className="nota">No puedes pedir y dar el mismo recurso.</p>}
+                  {todosBloquean && <p className="nota">Todos los jugadores tienen bloqueados los intercambios.</p>}
+                  {miOferta ? (
+                    <p className="nota">Oferta enviada ⏳ Respondieron {Object.keys(miOferta.rechazos).length} de {otros.length} (rechazaron). El primero que acepte hace el cambio.</p>
+                  ) : (
+                    <p className="nota">Arma tu oferta con + y − y envíala. El primer jugador que la acepte hace el cambio contigo.</p>
+                  )}
+                  <div className="acc-modal">
+                    <button className="ok" disabled={!puedeOfrecer} onClick={() => void enviarOferta()}>✔ Enviar oferta</button>
+                    {miOferta && <button className="no" onClick={() => void quitarOferta()}>✕ Cancelar oferta</button>}
+                    <button className="ojo" onClick={() => setCambio(false)}>👁 Ocultar</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h3>Comercio con el banco</h3>
+                  <div className="fila-cartas">
+                    <div className="etiqueta">Recibo 1 de</div>
+                    {RECURSOS.map((r) => (
+                      <button key={r} className={recibo === r ? 'cartab on' : 'cartab'} style={{ background: COLOR[r] }} disabled={doy === r} onClick={() => setRecibo(r)}>
+                        <IconoRecurso tipo={r} />
+                        <small>{NOMBRE_RECURSO[r]}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="fila-cartas">
+                    <div className="etiqueta">Doy</div>
+                    {RECURSOS.map((r) => (
+                      <button key={r} className={doy === r ? 'cartab on' : 'cartab'} style={{ background: COLOR[r] }} disabled={mano[r] < tasas[r] || recibo === r} onClick={() => setDoy(r)}>
+                        <IconoRecurso tipo={r} />
+                        <b className="cnt">{mano[r]}</b>
+                        <small>{tasas[r]}:1</small>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="nota">
+                    {doy && recibo
+                      ? 'Das ' + tasas[doy] + ' de ' + NOMBRE_RECURSO[doy] + ' y recibes 1 de ' + NOMBRE_RECURSO[recibo] + '.'
+                      : 'Tasa normal 4:1. Con un puerto general 3:1, y con el puerto de un recurso 2:1. Solo se pueden dar los recursos que te alcanzan.'}
+                  </p>
+                  <div className="acc-modal">
+                    <button className="ok" disabled={!doy || !recibo || doy === recibo || mano[doy] < tasas[doy]} onClick={hacerBanco}>✔ Cambiar con el banco</button>
+                    <button className="ojo" onClick={() => setCambio(false)}>👁 Ocultar</button>
+                  </div>
+                </div>
+              )}
+              {error && <div className="error-mini">{error}</div>}
+            </div>
+          </div>
+        )}
+        {ofertaEntrante && (
+          <div className="oferta-in">
+            <div><b>{nombreDe(ofertaEntrante.de)}</b> ofrece <Cantidades c={ofertaEntrante.da} /> por <Cantidades c={ofertaEntrante.pide} /></div>
+            <div className="acc-modal">
+              <button className="ok" disabled={!alcanzaOferta} onClick={() => void aceptarOferta()}>Aceptar</button>
+              <button className="no" onClick={() => void rechazarOferta()}>Rechazar</button>
+            </div>
+            {!alcanzaOferta && <small>No tienes las cartas que piden.</small>}
+          </div>
+        )}
+        {miOferta && !cambio && (
+          <div className="oferta-in">
+            <div>Tu oferta: <Cantidades c={miOferta.da} /> por <Cantidades c={miOferta.pide} /> ⏳</div>
+            <div className="acc-modal">
+              <button className="no" onClick={() => void quitarOferta()}>Cancelar oferta</button>
+              <button className="ojo" onClick={() => setCambio(true)}>Ver</button>
+            </div>
+          </div>
+        )}
+        {panel === 'cartas' && (
+          <div className="panel panel-cartas">
+            <h3>Mis cartas de desarrollo</h3>
+            {misCartas.length === 0 && <p>Todavía no tienes cartas. Compra una con el botón Carta en tu turno.</p>}
+            {misCartas.map((c) => (
+              <div key={c.id} className={'carta-fila t-' + c.tipo}>
+                <div>
+                  <b>{NOMBRE_CARTA[c.tipo]}</b>
+                  <small>{DESCRIPCION_CARTA[c.tipo]}</small>
+                  {c.turno >= juego.rondaTurno && c.tipo !== 'punto' && <small>Podrás usarla en tu próximo turno.</small>}
+                </div>
+                {c.tipo === 'punto' ? (
+                  <span className="oculta">oculta</span>
+                ) : (
+                  <button className="ok" disabled={!puedeJugar(c)} onClick={() => (c.tipo === 'monopolio' || c.tipo === 'abundancia' ? setUsando(c) : jugarYa(c, {}))}>Jugar</button>
+                )}
+              </div>
+            ))}
+            <p className="nota">Solo puedes jugar 1 carta por turno, y no la que compraste en ese mismo turno.</p>
+          </div>
+        )}
+        {enDescartar && debo > 0 && (
+          <div className="modal">
+            <div className="modal-caja">
+              <h3>🐋 Salió 7: descarta {debo} cartas</h3>
+              <p className="nota">Elige exactamente {debo}. Seleccionadas: {suma5(selDescarte)} de {debo}.</p>
+              <div className="fila-cartas">
+                {RECURSOS.map((r) => (
+                  <Carta key={r} tipo={r} valor={selDescarte[r]} max={Math.min(mano[r], selDescarte[r] + debo - suma5(selDescarte))} onCambio={(n) => setSelDescarte({ ...selDescarte, [r]: n })} />
+                ))}
+              </div>
+              <div className="acc-modal">
+                <button className="ok" disabled={suma5(selDescarte) !== debo} onClick={descartarYa}>✔ Descartar</button>
+              </div>
+              {error && <div className="error-mini">{error}</div>}
+            </div>
+          </div>
+        )}
+        {enRobar && soyActual && (
+          <div className="modal">
+            <div className="modal-caja">
+              <h3>¿A quién le robas una carta?</h3>
+              <div className="victimas">
+                {juego.victimas.map((id) => (
+                  <button key={id} className="victima" style={{ borderColor: colorJ(id) }} onClick={() => robarAlguien(id)}>
+                    <span className="punto" style={{ background: colorJ(id) }} />
+                    <b>{nombreDe(id)}</b>
+                    <small>{juego.stats[id]?.cartas ?? 0} cartas</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {confirmarCarta && (
+          <div className="modal">
+            <div className="confirma">
+              <div className="confirma-texto">
+                <h3>Comprar carta de desarrollo</h3>
+                <p>¿Quieres comprar una carta de desarrollo?</p>
+                <div className="cons-costo">
+                  {RECURSOS.filter((r) => COSTO_CARTA[r]).map((r) => (
+                    <span key={r} className="cant">
+                      <IconoRecurso tipo={r} />
+                      <b>×{COSTO_CARTA[r]}</b>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="confirma-botones">
+                <button className="vx" onClick={() => setConfirmarCarta(false)} aria-label="Cancelar">✕</button>
+                <button className="vv" onClick={comprarYa} aria-label="Comprar">✔</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {cartaNueva && (
+          <div className="modal" onClick={() => setCartaNueva(null)}>
+            <div className={'carta-grande t-' + cartaNueva.tipo}>
+              <small>Compraste</small>
+              <h3>{NOMBRE_CARTA[cartaNueva.tipo]}</h3>
+              <p>{DESCRIPCION_CARTA[cartaNueva.tipo]}</p>
+              <button className="ok" onClick={() => setCartaNueva(null)}>Entendido</button>
+            </div>
+          </div>
+        )}
+        {usando && (
+          <div className="modal">
+            <div className="modal-caja">
+              <h3>{NOMBRE_CARTA[usando.tipo]}</h3>
+              {usando.tipo === 'monopolio' ? (
+                <div>
+                  <p className="nota">Elige el recurso que quieres quitarles a todos.</p>
+                  <div className="fila-cartas">
+                    {RECURSOS.map((r) => (
+                      <button key={r} className={elegidos[0] === r ? 'cartab on' : 'cartab'} style={{ background: COLOR[r] }} onClick={() => setElegidos([r])}>
+                        <IconoRecurso tipo={r} />
+                        <small>{NOMBRE_RECURSO[r]}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="acc-modal">
+                    <button className="ok" disabled={elegidos.length !== 1} onClick={() => jugarYa(usando, { recurso: elegidos[0] })}>✔ Usar Monopolio</button>
+                    <button className="no" onClick={() => { setUsando(null); setElegidos([]); }}>Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="nota">Elige 2 recursos del banco (pueden ser iguales). Elegidos: {elegidos.length ? elegidos.map((r) => NOMBRE_RECURSO[r]).join(' y ') : 'ninguno'}.</p>
+                  <div className="fila-cartas">
+                    {RECURSOS.map((r) => (
+                      <button key={r} className="cartab" style={{ background: COLOR[r] }} disabled={elegidos.length >= 2} onClick={() => setElegidos([...elegidos, r])}>
+                        <IconoRecurso tipo={r} />
+                        <small>{NOMBRE_RECURSO[r]}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="acc-modal">
+                    <button className="ok" disabled={elegidos.length !== 2} onClick={() => jugarYa(usando, { recursos: elegidos })}>✔ Tomar</button>
+                    <button className="ojo" onClick={() => setElegidos([])}>Borrar</button>
+                    <button className="no" onClick={() => { setUsando(null); setElegidos([]); }}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {enFin && (
+          <div className="modal">
+            <div className="modal-caja final">
+              <h2>🏆 {juego.ganador ? nombreDe(juego.ganador) : 'Alguien'} ganó la partida</h2>
+              <div className="orden-lista">
+                {[...juego.orden]
+                  .sort((a, b) => puntosTotales(sala, juego, b) - puntosTotales(sala, juego, a))
+                  .map((id) => {
+                    const ocultos = (sala.cartas?.[id] ?? []).filter((c) => c.tipo === 'punto').length;
+                    return (
+                      <div key={id} className="orden-fila">
+                        <span className="punto" style={{ background: colorJ(id) }} />
+                        <span className="orden-nombre">{nombreDe(id)}{id === juego.ganador ? ' 🏆' : ''}</span>
+                        <span className="orden-valor">{puntosTotales(sala, juego, id)} puntos{ocultos ? ' (' + ocultos + ' ocultos)' : ''}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+              <div className="acc-modal">
+                <button className="ojo" onClick={onSalir}>Salir</button>
+              </div>
+            </div>
           </div>
         )}
         {panel === 'chat' && hayChat && (

@@ -5,10 +5,10 @@ import type { Modo } from './tablero';
 import './juego.css';
 
 type Punto = { x: number; y: number };
-type Props = { modo?: Modo; semilla?: number; overlay?: ReactNode; sinBallena?: boolean };
+type Props = { modo?: Modo; semilla?: number; overlay?: ReactNode; fondo?: ReactNode; sinBallena?: boolean; flotante?: boolean; mesa?: boolean };
 const INICIO = { x: 0, y: 0, k: 1 };
 
-export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, sinBallena }: Props) {
+export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, fondo, sinBallena, flotante, mesa }: Props) {
   const fijo = modoFijo !== undefined && semillaFija !== undefined;
   const [modoLibre, setModoLibre] = useState<Modo>('p');
   const [semillaLibre, setSemillaLibre] = useState(11);
@@ -20,9 +20,19 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, s
   const inicios = useRef(new Map<number, Punto>());
   const capturados = useRef(new Set<number>());
   const distAnterior = useRef(0);
+  const visorRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const zoom = (factor: number) =>
-    setVista((v) => ({ ...v, k: Math.min(4, Math.max(0.5, v.k * factor)) }));
+    setVista((v) => ({ ...v, k: Math.min(4, Math.max(mesa ? 0.2 : 0.5, v.k * factor)) }));
+
+  const verMesa = () => {
+    const visor = visorRef.current, sv = svgRef.current;
+    if (!visor || !sv) return;
+    const esc = sv.clientWidth / 860;
+    const k = Math.min(visor.clientWidth / (1560 * esc), visor.clientHeight / (1130 * esc), 1);
+    setVista({ x: 0, y: 0, k: Math.max(0.2, k) });
+  };
 
   const alPresionar = (e: PE<HTMLDivElement>) => {
     punteros.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -63,7 +73,15 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, s
 
   return (
     <div className="juego">
-      <div className="barra">
+      {flotante && (
+        <div className="zoom-flotante">
+          <button onClick={() => zoom(1.25)}>+</button>
+          <button onClick={() => zoom(0.8)}>−</button>
+          <button onClick={() => setVista(INICIO)}>⟲</button>
+          {mesa && <button onClick={verMesa} title="Ver toda la mesa">🗺</button>}
+        </div>
+      )}
+      <div className={flotante ? 'barra oculta' : 'barra'}>
         {!fijo && (
           <>
             <button className={modo === 'p' ? 'on' : ''} onClick={() => cambiar('p')}>3 o 4 jugadores</button>
@@ -79,6 +97,7 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, s
       </div>
       <div
         className="visor"
+        ref={visorRef}
         onPointerDown={alPresionar}
         onPointerMove={alMover}
         onPointerUp={alSoltar}
@@ -87,9 +106,11 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, s
       >
         <svg
           className="tablero"
+          ref={svgRef}
           viewBox="0 0 860 670"
-          style={{ transform: `translate(${vista.x}px, ${vista.y}px) scale(${vista.k})` }}
+          style={{ overflow: 'visible', transform: `translate(${vista.x}px, ${vista.y}px) scale(${vista.k})` }}
         >
+          {fondo}
           <g dangerouslySetInnerHTML={{ __html: svg }} />
           {overlay}
         </svg>
