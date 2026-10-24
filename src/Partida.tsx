@@ -6,6 +6,8 @@ import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_REC
 import type { CartaDes, ParamCarta, Recurso, Recursos, TipoPieza } from './reglas';
 import { COLOR, ballena, geometriaDe, mapaDe, posicion } from './tablero';
 import Juego from './Juego';
+import * as sonido from './sonido';
+import type { ModoSonido } from './sonido';
 import Mesa from './Mesa';
 import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones } from './piezas';
 import './partida.css';
@@ -142,6 +144,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   useEffect(() => {
     if (tirada === tiradaVista.current) return;
     tiradaVista.current = tirada;
+    sonido.dados();
     setRodando(true);
     const intervalo = window.setInterval(() => setAzar([dado6(), dado6()]), 90);
     const fin = window.setTimeout(() => {
@@ -189,6 +192,66 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     if (misCartas.length > cantCartasRef.current) setCartaNueva(misCartas[misCartas.length - 1]);
     cantCartasRef.current = misCartas.length;
   }, [misCartas]);
+
+  const [modoSonido, setModoSonido] = useState<ModoSonido>(sonido.obtenerModo());
+  const piezasN = juego
+    ? Object.keys(juego.poblados).length + Object.keys(juego.caminos).length + Object.values(juego.poblados).filter((q) => q.tipo === 'ciudad').length
+    : 0;
+  const prevCamino = useRef(juego?.camino?.uid);
+  const prevEjercito = useRef(juego?.ejercito?.uid);
+  const prevFase = useRef(juego?.fase);
+  const prevLadron = useRef(juego?.ladron);
+  const prevActual = useRef(actualUid);
+  const prevPiezas = useRef(piezasN);
+
+  useEffect(() => {
+    sonido.iniciar();
+    const h = () => sonido.iniciar();
+    window.addEventListener('pointerdown', h, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', h);
+      sonido.detener();
+    };
+  }, []);
+
+  useEffect(() => {
+    const n = juego?.camino?.uid;
+    if (n && n !== prevCamino.current) sonido.caminoLargo();
+    prevCamino.current = n;
+  }, [juego?.camino?.uid]);
+
+  useEffect(() => {
+    const n = juego?.ejercito?.uid;
+    if (n && n !== prevEjercito.current) sonido.mayorEjercito();
+    prevEjercito.current = n;
+  }, [juego?.ejercito?.uid]);
+
+  useEffect(() => {
+    const f = juego?.fase;
+    const antes = prevFase.current;
+    if (f === 'fin' && antes !== 'fin') sonido.victoria();
+    else if ((f === 'descartar' || f === 'mover') && antes !== 'descartar' && antes !== 'mover') sonido.ladron();
+    prevFase.current = f;
+  }, [juego?.fase]);
+
+  useEffect(() => {
+    if (prevLadron.current !== juego?.ladron) sonido.chapoteo();
+    prevLadron.current = juego?.ladron;
+  }, [juego?.ladron]);
+
+  useEffect(() => {
+    if (actualUid === uid && prevActual.current !== uid && juego?.fase === 'tirar') sonido.tuTurno();
+    prevActual.current = actualUid;
+  }, [actualUid, uid, juego?.fase]);
+
+  useEffect(() => {
+    if (piezasN > prevPiezas.current) sonido.construir();
+    prevPiezas.current = piezasN;
+  }, [piezasN]);
+
+  useEffect(() => {
+    if (juego?.aviso && juego.aviso.includes('aceptó el cambio')) sonido.cambio();
+  }, [juego?.aviso]);
 
   if (!juego || !partida || !geo) {
     return (
@@ -292,9 +355,9 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const vb = geo.vertices[a.b];
         return (
           <g key={e} pointerEvents="none">
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#ffffff" strokeWidth={12} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={7} strokeLinecap="round" />
-            <path d={listones(va.x, va.y, vb.x, vb.y, 1)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.4} fill="none" />
+            <path d={listones(va.x, va.y, vb.x, vb.y, 1)} stroke="rgba(0,0,0,0.45)" strokeWidth={1.4} fill="none" />
           </g>
         );
       })}
@@ -350,6 +413,11 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
   const filasOrden = juego.grupos.flat();
   const listaJugadores = enOrden ? filasOrden : juego.orden;
+  const ciclarSonido = () => {
+    const n = ((modoSonido + 1) % 3) as ModoSonido;
+    sonido.ponerModo(n);
+    setModoSonido(n);
+  };
   const alternar = (p: Panel) => setPanel((actual) => (actual === p ? 'ninguno' : p));
 
   return (
@@ -422,6 +490,9 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         </div>
 
         <button className="salir flot-der" onClick={onSalir}>Salir</button>
+        <button className="sonido-btn" onClick={ciclarSonido} aria-label="Sonido" title={modoSonido === 0 ? 'Música y sonidos' : modoSonido === 1 ? 'Solo sonidos' : 'Silencio'}>
+          {modoSonido === 0 ? '🎵' : modoSonido === 1 ? '🔔' : '🔇'}
+        </button>
 
         {panel === 'jugadores' && (
           <div className="panel panel-jug">
@@ -469,7 +540,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
                   <svg viewBox="-20 -25 40 38" width="34" height="32" aria-hidden="true">
                     {t === 'camino' ? (
                       <g>
-                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#ffffff" strokeWidth={12} strokeLinecap="round" />
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
                         <line x1={-16} y1={6} x2={16} y2={-12} stroke={miColor} strokeWidth={7} strokeLinecap="round" />
                         <path d={listones(-16, 6, 16, -12, 1)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.4} fill="none" />
                       </g>
@@ -577,7 +648,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </div>
         )}
         {miOferta && !cambio && (
-          <div className="oferta-in">
+          <div className="oferta-in propia">
             <div>Tu oferta: <Cantidades c={miOferta.da} /> por <Cantidades c={miOferta.pide} /> ⏳</div>
             <div className="acc-modal">
               <button className="no" onClick={() => void quitarOferta()}>Cancelar oferta</button>

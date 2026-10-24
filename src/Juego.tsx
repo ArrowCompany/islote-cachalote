@@ -10,7 +10,9 @@ const INICIO = { x: 0, y: 0, k: 1 };
 
 export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, fondo, sinBallena, flotante, mesa }: Props) {
   const fijo = modoFijo !== undefined && semillaFija !== undefined;
-  const [modoLibre, setModoLibre] = useState<Modo>('p');
+  const [tam, setTam] = useState<'p' | 'g'>('p');
+  const [forma, setForma] = useState<'cachalote' | 'catan'>('cachalote');
+  const modoLibre: Modo = forma === 'catan' ? (tam === 'p' ? 'cp' : 'cg') : tam;
   const [semillaLibre, setSemillaLibre] = useState(11);
   const [vista, setVista] = useState(INICIO);
   const modo: Modo = modoFijo ?? modoLibre;
@@ -69,7 +71,7 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
     inicios.current.delete(e.pointerId);
     capturados.current.delete(e.pointerId);
   };
-  const cambiar = (m: Modo) => { setModoLibre(m); setVista(INICIO); };
+  const cambiar = (m: 'p' | 'g') => { setTam(m); setVista(INICIO); };
 
   return (
     <div className="juego">
@@ -84,8 +86,10 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
       <div className={flotante ? 'barra oculta' : 'barra'}>
         {!fijo && (
           <>
-            <button className={modo === 'p' ? 'on' : ''} onClick={() => cambiar('p')}>3 o 4 jugadores</button>
-            <button className={modo === 'g' ? 'on' : ''} onClick={() => cambiar('g')}>5 o 6 jugadores</button>
+            <button className={tam === 'p' ? 'on' : ''} onClick={() => cambiar('p')}>3 o 4 jugadores</button>
+            <button className={tam === 'g' ? 'on' : ''} onClick={() => cambiar('g')}>5 o 6 jugadores</button>
+            <button className={forma === 'cachalote' ? 'on' : ''} onClick={() => setForma('cachalote')}>🐋 Cachalote</button>
+            <button className={forma === 'catan' ? 'on' : ''} onClick={() => setForma('catan')}>🏝️ Tipo Catan</button>
           </>
         )}
         <button className="on" onClick={() => zoom(1.25)}>+</button>

@@ -7,6 +7,7 @@ import type { EstadoJuego, Recursos } from './turnos';
 import { manoVacia } from './reglas';
 import type { CartaDes } from './reglas';
 import { mapaDe } from './tablero';
+import type { Modo } from './tablero';
 
 export const COLORES: { id: string; nombre: string; hex: string }[] = [
   { id: 'amarillo', nombre: 'Amarillo', hex: '#f5c400' },
@@ -19,8 +20,8 @@ export const COLORES: { id: string; nombre: string; hex: string }[] = [
   { id: 'naranja', nombre: 'Naranja', hex: '#f77f00' },
 ];
 
-export type Config = { mapa: 'aleatorio' | 'normal'; chat: boolean; reloj: 40 | 60 | 90 };
-export type Partida = { modo: 'p' | 'g'; semilla: number };
+export type Config = { mapa: 'cachalote' | 'catan'; chat: boolean; reloj: 40 | 60 | 90 };
+export type Partida = { modo: Modo; semilla: number };
 export type Jugador = { nombre: string; color: string; listo: boolean; orden: number; conectado?: boolean };
 export type Sala = {
   anfitrion: string;
@@ -34,7 +35,7 @@ export type Sala = {
   jugadores?: Record<string, Jugador>;
 };
 
-export const CONFIG_INICIAL: Config = { mapa: 'aleatorio', chat: true, reloj: 60 };
+export const CONFIG_INICIAL: Config = { mapa: 'cachalote', chat: true, reloj: 60 };
 
 export function iniciarSesion(): Promise<User> {
   return new Promise((resolve, reject) => {
@@ -129,8 +130,9 @@ export async function iniciarPartida(codigo: string, config: Config, uids: strin
   const actual = snap.val() as Sala | null;
   const js = actual?.jugadores ?? {};
   const lista = uids.map((uid) => ({ uid, nombre: js[uid]?.nombre ?? '' }));
-  const modo: 'p' | 'g' = uids.length >= 5 ? 'g' : 'p';
-  const semilla = config.mapa === 'normal' ? 11 : Math.floor(Math.random() * 2147483646) + 1;
+  const grande = uids.length >= 5;
+  const modo: Modo = config.mapa === 'catan' ? (grande ? 'cg' : 'cp') : grande ? 'g' : 'p';
+  const semilla = Math.floor(Math.random() * 2147483646) + 1;
   const mapa = mapaDe(modo, semilla);
   const [dr, dc] = mapa.desiertos[0];
   const manos: Record<string, Recursos> = {};

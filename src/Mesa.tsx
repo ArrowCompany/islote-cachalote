@@ -51,7 +51,7 @@ export default function Mesa({ jugadores, juego }: { jugadores: JugadorMesa[]; j
             <text x={28} y={20} fontSize={22} fontWeight={700} fill="#ffffff">{p.nombre}</text>
             {Array.from({ length: resto.camino }, (_, k) => (
               <g key={k} transform={`translate(${(k % 5) * 54 + 6} ${42 + Math.floor(k / 5) * 17})`}>
-                <line x1={0} y1={0} x2={42} y2={0} stroke="#ffffff" strokeWidth={12} strokeLinecap="round" />
+                <line x1={0} y1={0} x2={42} y2={0} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
                 <line x1={0} y1={0} x2={42} y2={0} stroke={p.hex} strokeWidth={7} strokeLinecap="round" />
                 <path d={listones(0, 0, 42, 0, 0.9)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.2} fill="none" />
               </g>

@@ -164,3 +164,37 @@
 .carta-grande .ok { align-self: center; font: 700 17px system-ui, sans-serif; padding: 11px 18px; border-radius: 12px; border: 0; background: #2e9e44; color: #fff; cursor: pointer; }
 .modal-caja.final h2 { color: #f5a623; text-align: center; margin: 4px 0 10px; }
 @media (max-width: 620px) { .puntos-bar { max-width: 100%; } .confirma { flex-direction: column; } .confirma-botones { flex-direction: row; } }
+
+/* ventanas de cambio mas grandes */
+.modal-caja { width: min(1080px, 100%); padding: 16px; }
+.pestanas button { font-size: 19px; padding: 14px 10px; }
+.bloq { font-size: 16px; }
+.bloq input { width: 24px; height: 24px; }
+.cerrar { width: 48px; height: 48px; font-size: 22px; }
+.modal-caja h3 { font-size: 24px; margin: 10px 0; }
+.etiqueta { width: 104px; font-size: 16px; }
+.carta, .cartab { flex: 1 0 112px; padding: 10px 6px; border-width: 4px; }
+.carta .icono-rec, .cartab .icono-rec { width: 62px; height: 62px; }
+.carta .cnt { font-size: 34px; }
+.cartab .cnt { font-size: 30px; }
+.cartab small { font-size: 15px; }
+.carta .mm button { width: 48px; height: 40px; font-size: 26px; }
+.nota { font-size: 17px; }
+.acc-modal button { font-size: 20px; padding: 14px 22px; }
+.oferta-in { top: 50%; transform: translate(-50%, -50%); width: min(680px, calc(100% - 16px)); padding: 20px; font-size: 22px; gap: 14px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6); border-width: 4px; }
+.oferta-in .cant .icono-rec { width: 54px; height: 54px; }
+.oferta-in .cant b { font-size: 30px; }
+.oferta-in .acc-modal button { font-size: 24px; padding: 16px 30px; }
+.oferta-in.propia { top: 76px; transform: translateX(-50%); width: min(460px, calc(100% - 16px)); padding: 10px; font-size: 16px; gap: 6px; box-shadow: none; border-width: 2px; }
+.oferta-in.propia .cant .icono-rec { width: 30px; height: 30px; }
+.oferta-in.propia .cant b { font-size: 18px; }
+.oferta-in.propia .acc-modal button { font-size: 16px; padding: 10px 16px; }
+@media (max-width: 620px) {
+  .etiqueta { width: 66px; font-size: 13px; }
+  .carta, .cartab { flex: 1 0 88px; }
+  .carta .icono-rec, .cartab .icono-rec { width: 48px; height: 48px; }
+  .carta .cnt { font-size: 28px; }
+  .oferta-in.propia { top: 110px; }
+}
+
+.sonido-btn { position: absolute; top: 8px; right: 76px; z-index: 20; width: 46px; height: 42px; border-radius: 10px; border: 0; background: #f3e6c4; font-size: 20px; cursor: pointer; padding: 0; }

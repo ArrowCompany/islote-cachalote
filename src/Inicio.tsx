@@ -153,6 +153,7 @@ export default function Inicio() {
     const ocupados = jugadores.filter(([id]) => id !== uid).map(([, j]) => j.color);
     const hex = (id: string) => COLORES.find((c) => c.id === id)?.hex ?? '#888';
     const cfg: Config = sala?.config ?? CONFIG_INICIAL;
+    const mapaElegido: 'cachalote' | 'catan' = cfg.mapa === 'catan' ? 'catan' : 'cachalote';
     const esAnfitrion = sala?.anfitrion === uid;
     const todosListos = jugadores.length >= MIN_JUGADORES && jugadores.every(([, j]) => j.listo);
     const cambiarCfg = (parcial: Partial<Config>) => {
@@ -210,9 +211,10 @@ export default function Inicio() {
           <div className="opciones">
             <span className="etq">Mapa</span>
             <div className="grupo">
-              <button className={cfg.mapa === 'aleatorio' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'aleatorio' })}>🎲 Aleatorio</button>
-              <button className={cfg.mapa === 'normal' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'normal' })}>Normal</button>
+              <button className={mapaElegido === 'cachalote' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'cachalote' })}>🐋 Mapa cachalote</button>
+              <button className={mapaElegido === 'catan' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'catan' })}>🏝️ Mapa tipo Catan</button>
             </div>
+            <small>{mapaElegido === 'cachalote' ? 'La isla tiene forma de cachalote.' : 'La isla tiene la forma clásica del Catan.'} En los dos, los hexágonos, los números y los puertos cambian al azar en cada partida.</small>
             <span className="etq">Chat de grupo</span>
             <div className="grupo">
               <button className={cfg.chat ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ chat: true })}>Con chat</button>

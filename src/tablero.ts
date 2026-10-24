@@ -1,6 +1,8 @@
 type Rng = () => number;
 export type Celda = [number, number];
-export type Modo = 'p' | 'g';
+export type Modo = 'p' | 'g' | 'cp' | 'cg';
+export const esGrande = (m: Modo) => m === 'g' || m === 'cg';
+export const esCatan = (m: Modo) => m === 'cp' || m === 'cg';
 
 export type Hex = { r: number; c: number; x: number; y: number; tipo: string; num: number; idx: number };
 export type Puerto = { tipo: string; mar: Celda; tierra: Celda };
@@ -17,6 +19,8 @@ const K = S / 46;
 const TIERRAS: Record<Modo, Record<number, number[]>> = {
   g: { 0: [1, 8, 9], 1: [0, 1, 2, 3, 4, 7, 8], 2: [0, 1, 2, 3, 4, 5, 6, 7], 3: [0, 1, 2, 3, 4, 5], 4: [1, 2, 3, 4, 6], 5: [1] },
   p: { 0: [1, 5], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 2, 3, 4, 5], 3: [0, 1, 2], 4: [1, 2] },
+  cp: { 0: [1, 2, 3], 1: [0, 1, 2, 3], 2: [0, 1, 2, 3, 4], 3: [0, 1, 2, 3], 4: [1, 2, 3] },
+  cg: { 0: [3, 4, 5], 1: [2, 3, 4, 5], 2: [2, 3, 4, 5, 6], 3: [1, 2, 3, 4, 5, 6], 4: [2, 3, 4, 5, 6], 5: [2, 3, 4, 5], 6: [3, 4, 5] },
 };
 export const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8f7bdc', desert: '#ead9a3' };
 const IN = 'M0 -42L36.4 -21V21L0 42L-36.4 21V-21Z';
@@ -114,8 +118,8 @@ function ficha(t: string, rn: Rng) {
 }
 
 export function posicion(modo: Modo, r: number, c: number): Celda {
-  const OX = modo === 'g' ? 110 : 255;
-  const OY = modo === 'g' ? 108 : 135;
+  const OX = modo === 'g' ? 110 : modo === 'cp' ? 291.4 : modo === 'cg' ? 152.9 : 255;
+  const OY = modo === 'g' ? 108 : modo === 'cg' ? 100 : 135;
   return [OX + c * W + (r & 1 ? W / 2 : 0), OY + r * RH];
 }
 
@@ -125,14 +129,26 @@ function vecinas(r: number, c: number): Celda[] {
     : [[r, c - 1], [r, c + 1], [r - 1, c - 1], [r - 1, c], [r + 1, c - 1], [r + 1, c]];
 }
 
+function clavesBorde(modo: Modo, tierra: Celda, mar: Celda): string[] {
+  const [lx, ly] = posicion(modo, tierra[0], tierra[1]);
+  const [sx, sy] = posicion(modo, mar[0], mar[1]);
+  const res: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = ((60 * i - 30) * Math.PI) / 180;
+    const x = lx + S * Math.cos(a), y = ly + S * Math.sin(a);
+    if (Math.abs(Math.hypot(x - sx, y - sy) - S) < 1) res.push(x.toFixed(1) + ',' + y.toFixed(1));
+  }
+  return res;
+}
+
 export function generarMapa(modo: Modo, semilla: number = 11): Mapa {
-  const grande = modo === 'g';
+  const grande = esGrande(modo);
   const tierra = TIERRAS[modo];
   const esT = (r: number, c: number) => (tierra[r] ?? []).includes(c);
 
   const mar = new Map<string, Celda>();
   const lista: Celda[] = [];
-  for (let r = 0; r < 6; r++) {
+  for (let r = 0; r < 8; r++) {
     (tierra[r] ?? []).forEach((c) => {
       lista.push([r, c]);
       vecinas(r, c).forEach((n) => { if (!esT(n[0], n[1])) mar.set(n[0] + ',' + n[1], n); });
@@ -213,11 +229,19 @@ export function generarMapa(modo: Modo, semilla: number = 11): Mapa {
     [tiposPuerto[i], tiposPuerto[j]] = [tiposPuerto[j], tiposPuerto[i]];
   }
   const puertos: Puerto[] = [];
+  const ocupadas = new Set<string>();
   tiposPuerto.forEach((tipo, i) => {
-    const q = arr[Math.floor(((i + 0.5) * arr.length) / tiposPuerto.length)];
-    const lt = vecinas(q.n[0], q.n[1]).find((m) => esT(m[0], m[1]));
-    if (!lt) return;
-    puertos.push({ tipo, mar: q.n, tierra: lt });
+    const base = Math.floor(((i + 0.5) * arr.length) / tiposPuerto.length);
+    for (let d = 0; d < arr.length; d++) {
+      const q = arr[(base + d) % arr.length];
+      const lt = vecinas(q.n[0], q.n[1]).find((m) => esT(m[0], m[1]));
+      if (!lt) continue;
+      const claves = clavesBorde(modo, lt, q.n);
+      if (claves.some((k) => ocupadas.has(k))) continue;
+      claves.forEach((k) => ocupadas.add(k));
+      puertos.push({ tipo, mar: q.n, tierra: lt });
+      break;
+    }
   });
 
   return { modo, semilla, hexes, desiertos, mar: claves.map((q) => mar.get(q)!), puertos };
@@ -286,6 +310,21 @@ export function geometria(mapa: Mapa): Geometria {
   return { vertices, aristas, listaV, listaA };
 }
 
+export function verticesPuerto(mapa: Mapa, geo: Geometria, pu: Puerto): string[] {
+  const [lx, ly] = posicion(mapa.modo, pu.tierra[0], pu.tierra[1]);
+  const [sx, sy] = posicion(mapa.modo, pu.mar[0], pu.mar[1]);
+  const res: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = ((60 * i - 30) * Math.PI) / 180;
+    const x = lx + S * Math.cos(a), y = ly + S * Math.sin(a);
+    if (Math.abs(Math.hypot(x - sx, y - sy) - S) < 1) {
+      const v = geo.listaV.find((q) => Math.hypot(q.x - x, q.y - y) < 1);
+      if (v) res.push(v.id);
+    }
+  }
+  return res;
+}
+
 const cacheGeo = new Map<string, Geometria>();
 export function geometriaDe(modo: Modo, semilla: number): Geometria {
   const clave = modo + '-' + semilla;
@@ -352,13 +391,16 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
   });
   o += etiquetas;
 
-  const s0 = posicion(modo, 0, 1);
-  o += '<g transform="translate(' + f(s0[0] + 9) + ',' + f(s0[1] - 38) + ') scale(2.2)"><path d="M0 0q-2 -9 -9 -8M0 0q2 -9 9 -8M0 0v-10" stroke="#d8f4ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>';
-  o += '<text x="430" y="552" style="font-family:Georgia,serif;font-weight:600;text-anchor:middle;font-size:34px;fill:#f3e6c4">Islote Cachalote</text>';
+  const bajo = modo === 'cg' ? 58 : 0;
+  if (!esCatan(modo)) {
+    const s0 = posicion(modo, 0, 1);
+    o += '<g transform="translate(' + f(s0[0] + 9) + ',' + f(s0[1] - 38) + ') scale(2.2)"><path d="M0 0q-2 -9 -9 -8M0 0q2 -9 9 -8M0 0v-10" stroke="#d8f4ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>';
+  }
+  o += '<text x="430" y="' + (552 + bajo) + '" style="font-family:Georgia,serif;font-weight:600;text-anchor:middle;font-size:34px;fill:#f3e6c4">Islote Cachalote</text>';
   const leyenda: [string, string][] = [['wood', 'Madera'], ['brick', 'Ladrillo'], ['wool', 'Lana'], ['grain', 'Trigo'], ['ore', 'Mineral']];
   leyenda.forEach(([t, nombre], i) => {
     const x = 110 + i * 130;
-    o += '<rect x="' + x + '" y="582" width="18" height="18" rx="4" fill="' + COLOR[t] + '"/><text x="' + (x + 26) + '" y="597" style="font-family:system-ui,sans-serif;font-size:18px;fill:#f3e6c4">' + nombre + '</text>';
+    o += '<rect x="' + x + '" y="' + (582 + bajo) + '" width="18" height="18" rx="4" fill="' + COLOR[t] + '"/><text x="' + (x + 26) + '" y="' + (597 + bajo) + '" style="font-family:system-ui,sans-serif;font-size:18px;fill:#f3e6c4">' + nombre + '</text>';
   });
   return o;
 }

@@ -87,7 +87,7 @@ export function listones(x1: number, y1: number, x2: number, y2: number, k: numb
 
 export function FormaPoblado({ color }: { color: string }) {
   return (
-    <g stroke="#ffffff" strokeWidth={2.4} strokeLinejoin="round">
+    <g stroke="#000000" strokeWidth={2.8} strokeLinejoin="round">
       <rect x={-9} y={-3} width={18} height={12} fill={color} />
       <path d="M-12.5 -3L0 -15.5L12.5 -3Z" fill={oscurecer(color, 0.62)} />
       <rect x={-2.6} y={3} width={5.2} height={6} fill="#1b1b1b" stroke="none" opacity={0.6} />
@@ -98,7 +98,7 @@ export function FormaPoblado({ color }: { color: string }) {
 export function FormaCiudad({ color }: { color: string }) {
   const techo = oscurecer(color, 0.62);
   return (
-    <g stroke="#ffffff" strokeWidth={2.4} strokeLinejoin="round">
+    <g stroke="#000000" strokeWidth={2.8} strokeLinejoin="round">
       <rect x={-4} y={-4} width={19} height={14} fill={color} />
       <path d="M-6 -4L5.5 -14L17 -4Z" fill={techo} />
       <rect x={-16} y={-12} width={12} height={22} fill={color} />

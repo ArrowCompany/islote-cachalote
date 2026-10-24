@@ -1,5 +1,5 @@
 import { geometriaDe, mapaDe, verticesPuerto } from './tablero';
-import type { Geometria, Mapa } from './tablero';
+import type { Geometria, Mapa, Modo } from './tablero';
 
 export type Recurso = 'wood' | 'brick' | 'wool' | 'grain' | 'ore';
 export const RECURSOS: Recurso[] = ['wood', 'brick', 'wool', 'grain', 'ore'];
@@ -69,7 +69,7 @@ export type EstadoJuego = {
 };
 
 export type SalaJuego = {
-  partida?: { modo: 'p' | 'g'; semilla: number };
+  partida?: { modo: Modo; semilla: number };
   juego?: EstadoJuego;
   manos?: Record<string, Recursos>;
   cartas?: Record<string, CartaDes[]>;

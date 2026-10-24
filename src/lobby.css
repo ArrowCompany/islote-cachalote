@@ -28,3 +28,4 @@
 .grupo button:disabled { cursor: default; }
 .grupo button:disabled:not(.on) { opacity: 0.6; }
 .volver + .juego .barra { padding-top: 52px; }
+.opciones small { opacity: 0.85; font-size: 13px; line-height: 1.35; }
