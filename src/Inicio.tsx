@@ -22,6 +22,7 @@ export default function Inicio() {
   const [copiado, setCopiado] = useState(false);
   const [mostrarRanking, setMostrarRanking] = useState(false);
   const [ranking, setRanking] = useState<{ uid: string; nombre: string; puntos: number; partidas: number }[]>([]);
+  const [editarPerfil, setEditarPerfil] = useState(false);
 
   useEffect(() => {
     iniciarSesion().then((u) => setUid(u.uid)).catch((e) => setError(mensaje(e)));
@@ -273,20 +274,33 @@ export default function Inicio() {
     <div className="lobby">
       <div className="caja">
         <h1>Islote Cachalote 🐋</h1>
-        <p>¡Hola! Antes de empezar, escribe tu nombre y elige tu color.</p>
-        <input placeholder="Tu nombre" value={nombre} maxLength={14} onChange={(e) => setNombre(e.target.value)} />
-        <div className="colores">
-          {COLORES.map((c) => (
-            <button
-              key={c.id}
-              title={c.nombre}
-              aria-label={c.nombre}
-              className={color === c.id ? 'sel' : ''}
-              style={{ background: c.hex }}
-              onClick={() => setColor(c.id)}
-            />
-          ))}
-        </div>
+        {nombre && color && !editarPerfil ? (
+          <>
+            <p>¡Hola, <b>{nombre}</b>! Tu color:</p>
+            <div className="colores">
+              <span className="punto" style={{ background: COLORES.find((c) => c.id === color)?.hex ?? '#888', width: 32, height: 32, borderRadius: '50%', display: 'inline-block' }} />
+            </div>
+            <button className="btn sec" onClick={() => setEditarPerfil(true)}>Cambiar nombre o color</button>
+          </>
+        ) : (
+          <>
+            <p>¡Hola! Antes de empezar, escribe tu nombre y elige tu color.</p>
+            <input placeholder="Tu nombre" value={nombre} maxLength={14} onChange={(e) => setNombre(e.target.value)} />
+            <div className="colores">
+              {COLORES.map((c) => (
+                <button
+                  key={c.id}
+                  title={c.nombre}
+                  aria-label={c.nombre}
+                  className={color === c.id ? 'sel' : ''}
+                  style={{ background: c.hex }}
+                  onClick={() => setColor(c.id)}
+                />
+              ))}
+            </div>
+            {nombre && color && <button className="btn sec" onClick={() => setEditarPerfil(false)}>Listo</button>}
+          </>
+        )}
         {error && <div className="error">{error}</div>}
         <h2>Entrar a una sala</h2>
         <input
