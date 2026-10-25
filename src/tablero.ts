@@ -397,7 +397,7 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
         : r === 'grain' ? '<g><path d="M24 45V13" stroke="#9a7a1c" stroke-width="2.6" stroke-linecap="round"/><g fill="#f2c23c" stroke="#b98a14" stroke-width="1"><ellipse cx="24" cy="7" rx="3.6" ry="6"/><ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)"/><ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)"/></g></g>'
         : r === 'ore' ? '<g><ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26"/><path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" stroke-width="2.6" stroke-linecap="round" fill="none"/><rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" stroke-width="1.3"/><circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" stroke-width=".8"/></g>'
         : '';
-      icono = '<g transform="translate(' + f(tx - 37) + ',' + f(ty - 24) + ') scale(0.50)">' + svgIcon + '</g>';
+      icono = '<g transform="translate(' + f(tx - 37) + ',' + f(ty - 12) + ') scale(0.50)">' + svgIcon + '</g>';
     } else {
       icono = '';
     }
