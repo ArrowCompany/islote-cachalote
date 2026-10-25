@@ -170,6 +170,25 @@ export function enviarMensaje(codigo: string, uid: string, nombre: string, texto
   return push(ref(db, `salas/${codigo}/chat`), { uid, nombre, texto: t, ts: Date.now() });
 }
 
+export type EntradaRanking = { nombre: string; puntos: number; partidas: number };
+
+export function actualizarRanking(uid: string, nombre: string, puntos: number) {
+  const r = ref(db, `ranking/${uid}`);
+  return runTransaction(r, (cur: EntradaRanking | null) => {
+    if (!cur) return { nombre, puntos, partidas: 1 };
+    return { nombre, puntos: (cur.puntos ?? 0) + puntos, partidas: (cur.partidas ?? 0) + 1 };
+  });
+}
+
+export function escucharRanking(cb: (lista: { uid: string; nombre: string; puntos: number; partidas: number }[]) => void) {
+  return onValue(ref(db, 'ranking'), (s) => {
+    const val = s.val() as Record<string, EntradaRanking> | null;
+    const lista = Object.entries(val ?? {}).map(([uid, e]) => ({ uid, nombre: e.nombre, puntos: e.puntos ?? 0, partidas: e.partidas ?? 0 }));
+    lista.sort((a, b) => b.puntos - a.puntos);
+    cb(lista);
+  });
+}
+
 export async function salirSala(codigo: string, uid: string) {
   await onDisconnect(ref(db, `salas/${codigo}/jugadores/${uid}/conectado`)).cancel();
   await runTransaction(ref(db, 'salas/' + codigo), (s: Sala | null) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { COLORES, CONFIG_INICIAL, cambiarColor, crearSala, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
+import { COLORES, CONFIG_INICIAL, cambiarColor, crearSala, escucharRanking, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
 import type { Config, Sala } from './salas';
 import Juego from './Juego';
 import Partida from './Partida';
@@ -20,6 +20,8 @@ export default function Inicio() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const [mostrarRanking, setMostrarRanking] = useState(false);
+  const [ranking, setRanking] = useState<{ uid: string; nombre: string; puntos: number; partidas: number }[]>([]);
 
   useEffect(() => {
     iniciarSesion().then((u) => setUid(u.uid)).catch((e) => setError(mensaje(e)));
@@ -51,6 +53,12 @@ export default function Inicio() {
   useEffect(() => {
     if (pantalla === 'sala' && sala?.estado === 'jugando') setPantalla('partida');
   }, [pantalla, sala]);
+
+  useEffect(() => {
+    if (!mostrarRanking) return;
+    const off = escucharRanking(setRanking);
+    return () => off();
+  }, [mostrarRanking]);
 
   const datosValidos = () => {
     if (!uid) { setError('Conectando, espera un momento...'); return false; }
@@ -173,6 +181,7 @@ export default function Inicio() {
           <h1>Sala de espera</h1>
           <div className="codigo">{codigo}</div>
           <button className="btn sec" onClick={copiar}>{copiado ? '¡Enlace copiado!' : 'Copiar enlace para invitar'}</button>
+          <button className="btn sec" onClick={() => setMostrarRanking(true)}>🏆 Ranking</button>
           {error && <div className="error">{error}</div>}
           {!sala && <p>Cargando sala...</p>}
           {sala && !yo && <p>Ya no estás en esta sala.</p>}
@@ -237,6 +246,24 @@ export default function Inicio() {
           )}
           <button className="btn sec" onClick={() => setPantalla('prueba')}>Ver tablero de prueba</button>
           <button className="btn sec" onClick={salir}>Salir de la sala</button>
+
+          {mostrarRanking && (
+            <div className="modal-ranking">
+              <div className="modal-ranking-caja">
+                <h2>🏆 Ranking</h2>
+                <div className="lista">
+                  {ranking.length === 0 && <p>Sin datos aún.</p>}
+                  {ranking.map((r, i) => (
+                    <div className="fila" key={r.uid}>
+                      <span className="nombre">{i + 1}. {r.nombre}</span>
+                      <span className="estado">{r.puntos} pts · {r.partidas} partidas</span>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn sec" onClick={() => setMostrarRanking(false)}>Cerrar</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

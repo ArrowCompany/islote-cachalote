@@ -29,3 +29,6 @@
 .grupo button:disabled:not(.on) { opacity: 0.6; }
 .volver + .juego .barra { padding-top: 52px; }
 .opciones small { opacity: 0.85; font-size: 13px; line-height: 1.35; }
+.modal-ranking{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal-ranking-caja{background:#0b2f44;border-radius:14px;padding:20px;max-width:420px;width:90%;max-height:80vh;overflow:auto;}
+.modal-ranking-caja h2{text-align:center;margin:0 0 12px;}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { COLORES } from './salas';
+import { COLORES, actualizarRanking } from './salas';
 import type { Sala } from './salas';
 import { aceptarCambio, ahoraServidor, bloquearCambios, cambiarConBanco, cancelarCambio, comprarDesarrollo, construirPieza, descartarCartas, lanzarDadosOrden, mandarLadron, ponerCamino, ponerPoblado, proponerCambio, rechazarCambio, robarCartaA, terminarTurno, tiempoAgotado, tirarDados, usarCarta } from './turnos';
 import { enviarMensaje } from './salas';
@@ -201,6 +201,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     ? Object.keys(juego.poblados).length + Object.keys(juego.caminos).length + Object.values(juego.poblados).filter((q) => q.tipo === 'ciudad').length
     : 0;
   const prevCamino = useRef(juego?.camino?.uid);
+  const rankingRegistrado = useRef(false);
   const prevEjercito = useRef(juego?.ejercito?.uid);
   const prevFase = useRef(juego?.fase);
   const prevLadron = useRef(juego?.ladron);
@@ -251,6 +252,16 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     if (piezasN > prevPiezas.current) sonido.construir();
     prevPiezas.current = piezasN;
   }, [piezasN]);
+
+  useEffect(() => {
+    if (faseActual !== 'fin' || rankingRegistrado.current || !juego) return;
+    rankingRegistrado.current = true;
+    juego.orden.forEach((id) => {
+      const pts = puntosTotales(sala, juego, id);
+      const nombre = nombreDe(id);
+      void actualizarRanking(id, nombre, pts);
+    });
+  }, [faseActual]);
 
   useEffect(() => {
     if (juego?.aviso && juego.aviso.includes('aceptó el cambio')) sonido.cambio();
