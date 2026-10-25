@@ -1,4 +1,4 @@
-import { get, onDisconnect, onValue, ref, runTransaction, set, update } from 'firebase/database';
+import { get, onDisconnect, onValue, push, ref, runTransaction, set, update } from 'firebase/database';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth, db } from './firebase';
@@ -23,6 +23,7 @@ export const COLORES: { id: string; nombre: string; hex: string }[] = [
 export type Config = { mapa: 'cachalote' | 'catan'; chat: boolean; reloj: 40 | 60 | 90 };
 export type Partida = { modo: Modo; semilla: number };
 export type Jugador = { nombre: string; color: string; listo: boolean; orden: number; conectado?: boolean };
+export type MensajeChat = { uid: string; nombre: string; texto: string; ts: number };
 export type Sala = {
   anfitrion: string;
   estado: string;
@@ -33,6 +34,7 @@ export type Sala = {
   manos?: Record<string, Recursos>;
   cartas?: Record<string, CartaDes[]>;
   jugadores?: Record<string, Jugador>;
+  chat?: Record<string, MensajeChat>;
 };
 
 export const CONFIG_INICIAL: Config = { mapa: 'cachalote', chat: true, reloj: 60 };
@@ -160,6 +162,12 @@ export function marcarPresencia(codigo: string, uid: string) {
 
 export function escucharSala(codigo: string, cb: (s: Sala | null) => void) {
   return onValue(ref(db, 'salas/' + codigo), (s) => cb(s.exists() ? (s.val() as Sala) : null));
+}
+
+export function enviarMensaje(codigo: string, uid: string, nombre: string, texto: string) {
+  const t = texto.trim();
+  if (!t) return Promise.resolve();
+  return push(ref(db, `salas/${codigo}/chat`), { uid, nombre, texto: t, ts: Date.now() });
 }
 
 export async function salirSala(codigo: string, uid: string) {

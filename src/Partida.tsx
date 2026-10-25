@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { COLORES } from './salas';
 import type { Sala } from './salas';
 import { aceptarCambio, ahoraServidor, bloquearCambios, cambiarConBanco, cancelarCambio, comprarDesarrollo, construirPieza, descartarCartas, lanzarDadosOrden, mandarLadron, ponerCamino, ponerPoblado, proponerCambio, rechazarCambio, robarCartaA, terminarTurno, tiempoAgotado, tirarDados, usarCarta } from './turnos';
+import { enviarMensaje } from './salas';
 import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, contarPiezas, jugadorActual, lugaresPara, manoVacia, pendientesOrden, puedePagar, puntosTotales, tasasDe, verticesLibres } from './reglas';
 import type { CartaDes, ParamCarta, Recurso, Recursos, TipoPieza } from './reglas';
 import { COLOR, ballena, geometriaDe, mapaDe, posicion } from './tablero';
@@ -837,7 +838,22 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         {panel === 'chat' && hayChat && (
           <div className="panel panel-chat">
             <h3>Chat</h3>
-            <p>El chat de grupo llega en una de las siguientes partes.</p>
+            <div className="chat-mensajes">
+              {Object.values(sala.chat ?? {}).sort((a, b) => a.ts - b.ts).map((m, i) => (
+                <div key={i} className={m.uid === uid ? 'chat-msg yo' : 'chat-msg'}>
+                  <b style={{ color: colorJ(m.uid) }}>{m.nombre}:</b> {m.texto}
+                </div>
+              ))}
+            </div>
+            <div className="chat-rapidos">
+              {['🏴‍☠️', '👉⏱️', '😂', '😠', '🤔', '😢'].map((e) => (
+                <button key={e} onClick={() => void enviarMensaje(codigo, uid, sala.jugadores?.[uid]?.nombre ?? 'Jugador', e)}>{e}</button>
+              ))}
+            </div>
+            <form className="chat-form" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem('msg') as HTMLInputElement).value; void enviarMensaje(codigo, uid, sala.jugadores?.[uid]?.nombre ?? 'Jugador', v); (e.currentTarget.elements.namedItem('msg') as HTMLInputElement).value = ''; }}>
+              <input name="msg" type="text" placeholder="Mensaje..." maxLength={200} />
+              <button type="submit">Enviar</button>
+            </form>
           </div>
         )}
       </div>
