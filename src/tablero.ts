@@ -11,7 +11,7 @@ export type Vertice = { id: string; x: number; y: number; hexes: Celda[]; vecino
 export type Arista = { id: string; a: string; b: string };
 export type Geometria = { vertices: Record<string, Vertice>; aristas: Record<string, Arista>; listaV: Vertice[]; listaA: Arista[] };
 
-const S = 46;
+export const S = 46;
 const W = Math.sqrt(3) * S;
 const RH = 69;
 const K = S / 46;

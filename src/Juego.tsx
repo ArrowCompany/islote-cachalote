@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import type { PointerEvent as PE, ReactNode } from 'react';
 import { dibujarTablero } from './tablero';
 import type { Modo } from './tablero';
+import Juego3D from './Juego3D';
+import type { Control3D } from './vista3d/escena';
 import './juego.css';
 
 type Punto = { x: number; y: number };
@@ -15,6 +17,9 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
   const modoLibre: Modo = forma === 'catan' ? (tam === 'p' ? 'cp' : 'cg') : tam;
   const [semillaLibre, setSemillaLibre] = useState(11);
   const [vista, setVista] = useState(INICIO);
+  // Vista 3D (Etapa 1: solo tablero). Arranca siempre en 2D para poder jugar.
+  const [vista3d, setVista3d] = useState(false);
+  const control3d = useRef<Control3D | null>(null);
   const modo: Modo = modoFijo ?? modoLibre;
   const semilla: number = semillaFija ?? semillaLibre;
   const svg = useMemo(() => dibujarTablero(modo, semilla, !sinBallena), [modo, semilla, sinBallena]);
@@ -25,8 +30,21 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
   const visorRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const zoom = (factor: number) =>
+  const zoom = (factor: number) => {
+    // En 3D los botones mueven la cámara de Three.js.
+    if (vista3d) {
+      control3d.current?.acercar(factor);
+      return;
+    }
     setVista((v) => ({ ...v, k: Math.min(4, Math.max(mesa ? 0.2 : 0.5, v.k * factor)) }));
+  };
+
+  const centrar = () => {
+    if (vista3d) control3d.current?.reiniciar();
+    else setVista(INICIO);
+  };
+
+  const alternarVista = () => setVista3d((v) => !v);
 
   const verMesa = () => {
     const visor = visorRef.current, sv = svgRef.current;
@@ -77,10 +95,13 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
     <div className="juego">
       {flotante && (
         <div className="zoom-flotante">
+          <button className="vista" onClick={alternarVista} title={vista3d ? 'Volver al tablero 2D' : 'Ver el tablero en 3D'}>
+            {vista3d ? '2D' : '3D'}
+          </button>
           <button onClick={() => zoom(1.25)}>+</button>
           <button onClick={() => zoom(0.8)}>−</button>
-          <button onClick={() => setVista(INICIO)}>⟲</button>
-          {mesa && <button onClick={verMesa} title="Ver toda la mesa">🗺</button>}
+          <button onClick={centrar}>⟲</button>
+          {mesa && !vista3d && <button onClick={verMesa} title="Ver toda la mesa">🗺</button>}
         </div>
       )}
       <div className={flotante ? 'barra oculta' : 'barra'}>
@@ -92,9 +113,10 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
             <button className={forma === 'catan' ? 'on' : ''} onClick={() => setForma('catan')}>🏝️ Tipo Catan</button>
           </>
         )}
+        <button className={vista3d ? 'on' : ''} onClick={alternarVista}>{vista3d ? '🗺️ 2D' : '🧊 3D'}</button>
         <button className="on" onClick={() => zoom(1.25)}>+</button>
         <button className="on" onClick={() => zoom(0.8)}>−</button>
-        <button className="on" onClick={() => setVista(INICIO)}>Centrar</button>
+        <button className="on" onClick={centrar}>Centrar</button>
         {!fijo && (
           <button className="on" onClick={() => setSemillaLibre(Math.floor(Math.random() * 2147483646) + 1)}>🎲 Mapa aleatorio</button>
         )}
@@ -102,22 +124,33 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
       <div
         className="visor"
         ref={visorRef}
-        onPointerDown={alPresionar}
-        onPointerMove={alMover}
-        onPointerUp={alSoltar}
-        onPointerCancel={alSoltar}
-        onWheel={(e) => zoom(e.deltaY < 0 ? 1.1 : 0.9)}
+        onPointerDown={vista3d ? undefined : alPresionar}
+        onPointerMove={vista3d ? undefined : alMover}
+        onPointerUp={vista3d ? undefined : alSoltar}
+        onPointerCancel={vista3d ? undefined : alSoltar}
+        onWheel={vista3d ? undefined : (e) => zoom(e.deltaY < 0 ? 1.1 : 0.9)}
       >
-        <svg
-          className="tablero"
-          ref={svgRef}
-          viewBox="0 0 860 670"
-          style={{ overflow: 'visible', transform: `translate(${vista.x}px, ${vista.y}px) scale(${vista.k})` }}
-        >
-          {fondo}
-          <g dangerouslySetInnerHTML={{ __html: svg }} />
-          {overlay}
-        </svg>
+        {vista3d ? (
+          <Juego3D
+            modo={modo}
+            semilla={semilla}
+            onListo={(c) => {
+              control3d.current = c;
+            }}
+            onFallo={() => setVista3d(false)}
+          />
+        ) : (
+          <svg
+            className="tablero"
+            ref={svgRef}
+            viewBox="0 0 860 670"
+            style={{ overflow: 'visible', transform: `translate(${vista.x}px, ${vista.y}px) scale(${vista.k})` }}
+          >
+            {fondo}
+            <g dangerouslySetInnerHTML={{ __html: svg }} />
+            {overlay}
+          </svg>
+        )}
       </div>
     </div>
   );
