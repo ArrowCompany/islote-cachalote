@@ -859,13 +859,21 @@ function tirarYRepartir(ctx: Contexto, dado: Dado, ahora: number) {
     empezarSiete(ctx, ahora);
     return;
   }
-  const prod = produccion(ctx.mapa, ctx.geo, j.poblados, suma, j.ladron);
+  const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
+  const prod: Record<string, Recursos> = {};
+  sumas.forEach((sm) => {
+    const p = produccion(ctx.mapa, ctx.geo, j.poblados, sm, j.ladron);
+    Object.entries(p).forEach(([uid, gana]) => {
+      prod[uid] = prod[uid] ?? manoVacia();
+      RECURSOS.forEach((r) => { prod[uid][r] += gana[r]; });
+    });
+  });
   const partes: string[] = [];
   Object.entries(prod).forEach(([uid, gana]) => {
     darRecursos(ctx, uid, gana);
     partes.push(nombreDe(s, uid) + ' +' + totalCartas(gana));
   });
-  j.aviso = partes.length ? 'Salió ' + suma + ': ' + partes.join(', ') : 'Salió ' + suma + ': nadie recibe recursos';
+  j.aviso = partes.length ? 'Salió ' + suma + ' (también ' + (suma === 2 ? 12 : 2) + '): ' + partes.join(', ') : 'Salió ' + suma + ': nadie recibe recursos';
   revisarVictoria(s, j);
 }
 
