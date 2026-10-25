@@ -259,7 +259,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     juego.orden.forEach((id) => {
       const pts = puntosTotales(sala, juego, id);
       const nombre = nombreDe(id);
-      void actualizarRanking(id, nombre, pts);
+      void actualizarRanking(nombre, pts);
     });
   }, [faseActual]);
 

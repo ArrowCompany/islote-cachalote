@@ -172,11 +172,16 @@ export function enviarMensaje(codigo: string, uid: string, nombre: string, texto
 
 export type EntradaRanking = { nombre: string; puntos: number; partidas: number };
 
-export function actualizarRanking(uid: string, nombre: string, puntos: number) {
-  const r = ref(db, `ranking/${uid}`);
+export function claveRanking(nombre: string): string {
+  return (nombre || 'jugador').trim().replace(/[.$#[\]/]/g, '').replace(/\s+/g, '_') || 'jugador';
+}
+
+export function actualizarRanking(nombre: string, puntos: number) {
+  const clave = claveRanking(nombre);
+  const r = ref(db, `ranking/${clave}`);
   return runTransaction(r, (cur: EntradaRanking | null) => {
-    if (!cur) return { nombre, puntos, partidas: 1 };
-    return { nombre, puntos: (cur.puntos ?? 0) + puntos, partidas: (cur.partidas ?? 0) + 1 };
+    if (!cur) return { nombre: nombre.trim(), puntos, partidas: 1 };
+    return { nombre: nombre.trim(), puntos: (cur.puntos ?? 0) + puntos, partidas: (cur.partidas ?? 0) + 1 };
   });
 }
 
