@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { COLORES, actualizarRanking } from './salas';
+import { COLORES, actualizarRegistroMaquina, actualizarRanking } from './salas';
 import type { Sala } from './salas';
 import { esBotJugador, caminoInicial, decidirAccion, elegirDescarte, elegirHexLadron, elegirVictima, manoDeBot, pobladoInicial } from './bots';
 import { aceptarCambio, ahoraServidor, bloquearCambios, cambiarConBanco, cancelarCambio, comprarDesarrollo, construirPieza, descartarCartas, lanzarDadosOrden, mandarLadron, ponerCamino, ponerPoblado, proponerCambio, rechazarCambio, robarCartaA, terminarTurno, tiempoAgotado, tirarDados, usarCarta } from './turnos';
@@ -262,11 +262,15 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   useEffect(() => {
     if (faseActual !== 'fin' || rankingRegistrado.current || !juego) return;
     rankingRegistrado.current = true;
+    // Si en la partida hay bots de verdad (modo solo), es una partida contra la máquina:
+    // solo cuenta para el registro personal y no toca el ranking de jugadores reales.
+    const contraMaquina = juego.orden.some((id) => id.startsWith('bot_'));
     juego.orden.forEach((id) => {
       if (esBotJugador(sala.jugadores, id)) return;
       const pts = puntosTotales(sala, juego, id);
       const nombre = nombreDe(id);
-      void actualizarRanking(nombre, pts);
+      if (contraMaquina) void actualizarRegistroMaquina(nombre, pts, juego.ganador === id);
+      else void actualizarRanking(nombre, pts);
     });
   }, [faseActual]);
 

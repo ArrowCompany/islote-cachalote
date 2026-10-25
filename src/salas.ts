@@ -225,6 +225,30 @@ export function escucharRanking(cb: (lista: { uid: string; nombre: string; punto
   });
 }
 
+export type RegistroMaquina = { nombre: string; puntos: number; partidas: number; victorias: number; mejor: number };
+
+/**
+ * Partidas contra la máquina: es un registro personal y NUNCA se suma al ranking
+ * de jugadores reales. Se guarda aparte, por nombre.
+ */
+export function actualizarRegistroMaquina(nombre: string, puntos: number, gano: boolean) {
+  const clave = claveRanking(nombre);
+  return runTransaction(ref(db, `rankingMaquina/${clave}`), (cur: RegistroMaquina | null) => {
+    if (!cur) return { nombre: nombre.trim(), puntos, partidas: 1, victorias: gano ? 1 : 0, mejor: puntos };
+    return {
+      nombre: nombre.trim(),
+      puntos: (cur.puntos ?? 0) + puntos,
+      partidas: (cur.partidas ?? 0) + 1,
+      victorias: (cur.victorias ?? 0) + (gano ? 1 : 0),
+      mejor: Math.max(cur.mejor ?? 0, puntos),
+    };
+  });
+}
+
+export function escucharRegistroMaquina(nombre: string, cb: (r: RegistroMaquina | null) => void) {
+  return onValue(ref(db, `rankingMaquina/${claveRanking(nombre)}`), (s) => cb(s.exists() ? (s.val() as RegistroMaquina) : null));
+}
+
 export async function salirSala(codigo: string, uid: string) {
   await onDisconnect(ref(db, `salas/${codigo}/jugadores/${uid}/conectado`)).cancel();
   await runTransaction(ref(db, 'salas/' + codigo), (s: Sala | null) => {

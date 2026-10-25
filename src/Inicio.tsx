@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { COLORES, CONFIG_INICIAL, agregarBots, cambiarColor, crearSala, escucharRanking, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
-import type { Config, Sala } from './salas';
+import { COLORES, CONFIG_INICIAL, agregarBots, cambiarColor, crearSala, escucharRanking, escucharRegistroMaquina, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
+import type { Config, RegistroMaquina, Sala } from './salas';
 import Juego from './Juego';
 import Partida from './Partida';
 import './lobby.css';
@@ -22,6 +22,7 @@ export default function Inicio() {
   const [copiado, setCopiado] = useState(false);
   const [mostrarRanking, setMostrarRanking] = useState(false);
   const [ranking, setRanking] = useState<{ uid: string; nombre: string; puntos: number; partidas: number }[]>([]);
+  const [miMaquina, setMiMaquina] = useState<RegistroMaquina | null>(null);
   const [editarPerfil, setEditarPerfil] = useState(false);
 
   useEffect(() => {
@@ -60,6 +61,12 @@ export default function Inicio() {
     const off = escucharRanking(setRanking);
     return () => off();
   }, [mostrarRanking]);
+
+  useEffect(() => {
+    if (!mostrarRanking || nombre.trim().length < 2) return;
+    const off = escucharRegistroMaquina(nombre.trim(), setMiMaquina);
+    return () => off();
+  }, [mostrarRanking, nombre]);
 
   const datosValidos = () => {
     if (!uid) { setError('Conectando, espera un momento...'); return false; }
@@ -133,6 +140,50 @@ export default function Inicio() {
       setError('No pude copiar. Pasa este código: ' + codigo);
     }
   };
+
+  const modalRanking = mostrarRanking ? (
+    <div className="modal-ranking">
+      <div className="modal-ranking-caja">
+        <h2>🏆 Ranking de jugadores</h2>
+        <div className="lista">
+          {ranking.length === 0 && <p>Sin datos aún.</p>}
+          {ranking.map((r, i) => (
+            <div className="fila" key={r.uid}>
+              <span className="nombre">{i + 1}. {r.nombre}</span>
+              <span className="estado">{r.puntos} pts · {r.partidas} partidas</span>
+            </div>
+          ))}
+        </div>
+        <p className="nota-ranking">Solo suman las partidas con jugadores reales.</p>
+
+        <h3>🤖 Mi historial vs. máquina</h3>
+        {miMaquina ? (
+          <div className="lista">
+            <div className="fila">
+              <span className="nombre">Partidas jugadas</span>
+              <span className="estado">{miMaquina.partidas}</span>
+            </div>
+            <div className="fila">
+              <span className="nombre">Victorias</span>
+              <span className="estado">{miMaquina.victorias}</span>
+            </div>
+            <div className="fila">
+              <span className="nombre">Puntos acumulados</span>
+              <span className="estado">{miMaquina.puntos} pts</span>
+            </div>
+            <div className="fila">
+              <span className="nombre">Mejor partida</span>
+              <span className="estado">{miMaquina.mejor} pts</span>
+            </div>
+          </div>
+        ) : (
+          <p>Juega una partida contra bots y aquí verás tu progreso.</p>
+        )}
+        <p className="nota-ranking">Es personal: las partidas contra la máquina no se suman al ranking de jugadores.</p>
+        <button className="btn sec" onClick={() => setMostrarRanking(false)}>Cerrar</button>
+      </div>
+    </div>
+  ) : null;
 
   if (pantalla === 'prueba') {
     return (
@@ -260,23 +311,7 @@ export default function Inicio() {
           <button className="btn sec" onClick={() => setPantalla('prueba')}>Ver tablero de prueba</button>
           <button className="btn sec" onClick={salir}>Salir de la sala</button>
 
-          {mostrarRanking && (
-            <div className="modal-ranking">
-              <div className="modal-ranking-caja">
-                <h2>🏆 Ranking</h2>
-                <div className="lista">
-                  {ranking.length === 0 && <p>Sin datos aún.</p>}
-                  {ranking.map((r, i) => (
-                    <div className="fila" key={r.uid}>
-                      <span className="nombre">{i + 1}. {r.nombre}</span>
-                      <span className="estado">{r.puntos} pts · {r.partidas} partidas</span>
-                    </div>
-                  ))}
-                </div>
-                <button className="btn sec" onClick={() => setMostrarRanking(false)}>Cerrar</button>
-              </div>
-            </div>
-          )}
+          {modalRanking}
         </div>
       </div>
     );
@@ -325,6 +360,8 @@ export default function Inicio() {
         <button className="btn" disabled={cargando} onClick={entrar}>Entrar a la sala</button>
         <h2>¿Eres el anfitrión?</h2>
         <button className="btn sec" disabled={cargando} onClick={crear}>Crear sala nueva</button>
+        <button className="btn sec" onClick={() => setMostrarRanking(true)}>🏆 Ranking</button>
+        {modalRanking}
       </div>
     </div>
   );
