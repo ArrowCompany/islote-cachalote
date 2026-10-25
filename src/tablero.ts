@@ -380,9 +380,10 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
     const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
     let px = -uy, py = ux;
     if (py < 0) { px = -px; py = -py; }
+    const largo = L * 0.53;
     let tablas = '';
-    for (let xx = 6; xx < L * 0.8; xx += 8) tablas += 'M' + xx + ' -7V7';
-    o += '<g transform="translate(' + f(qx) + ',' + f(qy) + ') rotate(' + f(ang) + ')"><rect x="-4" y="-7" width="' + f(L * 0.8) + '" height="14" fill="#c8995a" stroke="#6b4423" stroke-width="1.2"/><path d="' + tablas + '" stroke="#8a5a2b" stroke-width="1.2"/><circle cx="-2" cy="-8" r="3" fill="#6b4423"/><circle cx="-2" cy="8" r="3" fill="#6b4423"/></g>';
+    for (let xx = 6; xx < largo; xx += 8) tablas += 'M' + xx + ' -5V5';
+    o += '<g transform="translate(' + f(qx) + ',' + f(qy) + ') rotate(' + f(ang) + ')"><rect x="-4" y="-5" width="' + f(largo) + '" height="10" fill="#c8995a" stroke="#6b4423" stroke-width="1.2"/><path d="' + tablas + '" stroke="#8a5a2b" stroke-width="1.2"/><circle cx="-2" cy="-6" r="2.5" fill="#6b4423"/><circle cx="-2" cy="6" r="2.5" fill="#6b4423"/></g>';
     const bx = qx + px * 22 - ux * 4, by = qy + py * 22 - uy * 4;
     o += '<ellipse cx="' + f(bx) + '" cy="' + f(by + 9) + '" rx="14" ry="3" fill="#06202e" opacity=".4"/><path d="M' + f(bx - 13) + ' ' + f(by) + 'L' + f(bx + 13) + ' ' + f(by) + 'L' + f(bx + 9) + ' ' + f(by + 8) + 'L' + f(bx - 9) + ' ' + f(by + 8) + 'Z" fill="#e8607f"/><path d="M' + f(bx) + ' ' + f(by - 20) + 'V' + f(by) + '" stroke="#6b4423" stroke-width="1.6"/><path d="M' + f(bx + 1.5) + ' ' + f(by - 19) + 'L' + f(bx + 12) + ' ' + f(by - 3) + 'L' + f(bx + 1.5) + ' ' + f(by - 3) + 'Z" fill="#fff7e0"/>';
     const sc = pu.tipo === '3' ? '#8a5a2b' : COLOR[pu.tipo];
@@ -396,11 +397,11 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
         : r === 'grain' ? '<g><path d="M24 45V13" stroke="#9a7a1c" stroke-width="2.6" stroke-linecap="round"/><g fill="#f2c23c" stroke="#b98a14" stroke-width="1"><ellipse cx="24" cy="7" rx="3.6" ry="6"/><ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)"/><ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)"/></g></g>'
         : r === 'ore' ? '<g><ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26"/><path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" stroke-width="2.6" stroke-linecap="round" fill="none"/><rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" stroke-width="1.3"/><circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" stroke-width=".8"/></g>'
         : '';
-      icono = '<g transform="translate(' + f(tx - 22) + ',' + f(ty - 13) + ') scale(0.4)">' + svgIcon + '</g>';
+      icono = '<g transform="translate(' + f(tx - 16) + ',' + f(ty - 10) + ') scale(0.2)">' + svgIcon + '</g>';
     } else {
-      icono = '<text x="' + f(tx) + '" y="' + f(ty - 14) + '" style="' + txt + 'font-size:18px;fill:#3b2a14">?</text>';
+      icono = '<text x="' + f(tx - 12) + '" y="' + f(ty + 5) + '" style="' + txt + 'font-size:14px;fill:#3b2a14">?</text>';
     }
-    etiquetas += '<rect x="' + f(tx - 24) + '" y="' + f(ty - 13) + '" width="48" height="26" rx="8" fill="#fff7e0" stroke="' + sc + '" stroke-width="3"/>' + icono + '<text x="' + f(tx + (dos ? 8 : 0)) + '" y="' + f(ty + 6) + '" style="' + txt + 'font-size:16px;fill:#3b2a14">' + (dos ? '2:1' : '3:1') + '</text>';
+    etiquetas += '<rect x="' + f(tx - 20) + '" y="' + f(ty - 12) + '" width="40" height="24" rx="7" fill="#fff7e0" stroke="' + sc + '" stroke-width="2.5"/>' + icono + '<text x="' + f(tx - 6) + '" y="' + f(ty + 5) + '" style="' + txt + 'font-size:14px;fill:#3b2a14">' + (dos ? '2:1' : '3:1') + '</text>';
   });
   o += etiquetas;
 
