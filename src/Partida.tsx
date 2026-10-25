@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { COLORES, actualizarRanking } from './salas';
 import type { Sala } from './salas';
+import { esBot, caminoInicial, decidirAccion, elegirDescarte, elegirHexLadron, elegirVictima, manoDeBot, pobladoInicial } from './bots';
 import { aceptarCambio, ahoraServidor, bloquearCambios, cambiarConBanco, cancelarCambio, comprarDesarrollo, construirPieza, descartarCartas, lanzarDadosOrden, mandarLadron, ponerCamino, ponerPoblado, proponerCambio, rechazarCambio, robarCartaA, terminarTurno, tiempoAgotado, tirarDados, usarCarta } from './turnos';
 import { enviarMensaje } from './salas';
 import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, contarPiezas, jugadorActual, lugaresPara, manoVacia, pendientesOrden, puedePagar, puntosTotales, tasasDe, verticesLibres } from './reglas';
@@ -109,6 +110,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const modo = partida?.modo;
   const semilla = partida?.semilla;
   const geo = useMemo(() => (modo && semilla !== undefined ? geometriaDe(modo, semilla) : null), [modo, semilla]);
+  const bots = useMemo(() => Object.keys(sala.jugadores ?? {}).filter(esBot), [sala.jugadores]);
   const hayJuego = !!juego && !!partida;
   const reloj = sala.config?.reloj ?? 60;
   const hayChat = sala.config?.chat !== false;
@@ -257,11 +259,84 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     if (faseActual !== 'fin' || rankingRegistrado.current || !juego) return;
     rankingRegistrado.current = true;
     juego.orden.forEach((id) => {
+      if (esBot(id)) return;
       const pts = puntosTotales(sala, juego, id);
       const nombre = nombreDe(id);
       void actualizarRanking(nombre, pts);
     });
   }, [faseActual]);
+
+  const [reintentoBot, setReintentoBot] = useState(0);
+  const accionesBot = useRef<{ turno: number; n: number }>({ turno: -1, n: 0 });
+
+  useEffect(() => {
+    if (!hayJuego || !juego || !geo || !partida || !soyAnfitrion || bots.length === 0) return;
+    if (juego.fase === 'fin') return;
+    const mapa = mapaDe(partida.modo, partida.semilla);
+    const enSala = new Set(bots);
+    let ejecutar: (() => Promise<void>) | null = null;
+
+    const oferta = juego.oferta;
+    if (oferta) {
+      const b = bots.find((x) => x !== oferta.de && !oferta.rechazos[x] && juego.orden.includes(x));
+      if (b) ejecutar = () => rechazarCambio(codigo, b, oferta.id).then(() => undefined);
+    }
+
+    if (!ejecutar) {
+      const pendientes = pendientesOrden(juego);
+      const actual = jugadorActual(juego);
+      let bot = '';
+      if (juego.fase === 'orden') bot = bots.find((b) => pendientes.includes(b) && !juego.tiradasOrden[b]) ?? '';
+      else if (juego.fase === 'descartar') bot = bots.find((b) => (juego.descartes[b] ?? 0) > 0) ?? '';
+      else if (['colocacion', 'tirar', 'accion', 'mover', 'robar'].includes(juego.fase) && enSala.has(actual)) bot = actual;
+
+      if (bot) {
+        const n = juego.numTurno;
+        if (juego.fase === 'orden') {
+          ejecutar = () => lanzarDadosOrden(codigo, bot, n).then(() => undefined);
+        } else if (juego.fase === 'descartar') {
+          const cuantas = juego.descartes[bot] ?? 0;
+          const sel = elegirDescarte(manoDeBot(sala.manos, bot), cuantas);
+          ejecutar = () => descartarCartas(codigo, bot, n, sel).then(() => undefined);
+        } else if (juego.fase === 'colocacion') {
+          if (juego.subpaso === 'poblado') {
+            const v = pobladoInicial(mapa, geo, juego);
+            if (v) ejecutar = () => ponerPoblado(codigo, bot, n, v).then(() => undefined);
+          } else if (juego.ultimoPoblado) {
+            const e = caminoInicial(mapa, geo, juego, juego.ultimoPoblado);
+            if (e) ejecutar = () => ponerCamino(codigo, bot, n, e).then(() => undefined);
+          }
+        } else if (juego.fase === 'tirar') {
+          ejecutar = () => tirarDados(codigo, bot, n).then(() => undefined);
+        } else if (juego.fase === 'accion') {
+          if (accionesBot.current.turno !== n) accionesBot.current = { turno: n, n: 0 };
+          const accion = decidirAccion(sala, mapa, geo, juego, bot, accionesBot.current.n);
+          accionesBot.current.n += 1;
+          ejecutar = () => {
+            if (accion.tipo === 'construir') return construirPieza(codigo, bot, n, accion.pieza, accion.id).then(() => undefined);
+            if (accion.tipo === 'comprar') return comprarDesarrollo(codigo, bot, n).then(() => undefined);
+            if (accion.tipo === 'banco') return cambiarConBanco(codigo, bot, n, accion.da, accion.recibe).then(() => undefined);
+            return terminarTurno(codigo, bot, n).then(() => undefined);
+          };
+        } else if (juego.fase === 'mover') {
+          const clave = elegirHexLadron(mapa, geo, juego, bot);
+          if (clave) ejecutar = () => mandarLadron(codigo, bot, n, clave).then(() => undefined);
+        } else if (juego.fase === 'robar') {
+          const v = elegirVictima(sala.manos, juego, bot);
+          if (v) ejecutar = () => robarCartaA(codigo, bot, n, v).then(() => undefined);
+        }
+      }
+    }
+
+    if (!ejecutar) return;
+    const accion = ejecutar;
+    const t = window.setTimeout(() => {
+      void accion().catch(() => {
+        window.setTimeout(() => setReintentoBot((x) => x + 1), 900);
+      });
+    }, 900);
+    return () => window.clearTimeout(t);
+  }, [hayJuego, juego, geo, partida, soyAnfitrion, bots, codigo, sala.manos, reintentoBot]);
 
   useEffect(() => {
     if (juego?.aviso && juego.aviso.includes('aceptó el cambio')) sonido.cambio();

@@ -39,6 +39,36 @@ export type Sala = {
 
 export const CONFIG_INICIAL: Config = { mapa: 'cachalote', chat: true, reloj: 60 };
 
+const esUidBot = (uid: string) => uid.startsWith('bot_');
+
+/** Agrega bots a la sala y devuelve todos los uids ordenados. */
+export async function agregarBots(codigo: string, cantidad: number): Promise<string[]> {
+  let uids: string[] = [];
+  await runTransaction(ref(db, 'salas/' + codigo), (s: Sala | null) => {
+    if (!s) return s;
+    const js = s.jugadores ?? {};
+    const usados = new Set(Object.values(js).map((j) => j.color));
+    let n = 1;
+    for (let i = 0; i < cantidad && Object.keys(js).length < 6; i++) {
+      let uid = 'bot_' + n;
+      while (js[uid]) {
+        n += 1;
+        uid = 'bot_' + n;
+      }
+      const color = COLORES.find((c) => !usados.has(c.id))?.id ?? 'negro';
+      usados.add(color);
+      js[uid] = { nombre: 'Bot ' + n, color, listo: true, orden: Object.keys(js).length, conectado: true };
+      n += 1;
+    }
+    s.jugadores = js;
+    uids = Object.entries(js)
+      .sort((a, b) => a[1].orden - b[1].orden)
+      .map(([id]) => id);
+    return s;
+  });
+  return uids;
+}
+
 export function iniciarSesion(): Promise<User> {
   return new Promise((resolve, reject) => {
     const off = onAuthStateChanged(auth, (u) => {
@@ -202,6 +232,7 @@ export async function salirSala(codigo: string, uid: string) {
     delete js[uid];
     const ids = Object.keys(js);
     if (ids.length === 0) return null;
+    if (ids.every(esUidBot)) return null;
     s.jugadores = js;
     if (s.anfitrion === uid) s.anfitrion = ids[0];
     return s;

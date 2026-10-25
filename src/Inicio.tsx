@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { COLORES, CONFIG_INICIAL, cambiarColor, crearSala, escucharRanking, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
+import { COLORES, CONFIG_INICIAL, agregarBots, cambiarColor, crearSala, escucharRanking, escucharSala, existeJugador, guardarConfig, iniciarPartida, iniciarSesion, marcarListo, marcarPresencia, salirSala, unirseSala } from './salas';
 import type { Config, Sala } from './salas';
 import Juego from './Juego';
 import Partida from './Partida';
@@ -176,6 +176,17 @@ export default function Inicio() {
         setError(mensaje(e));
       }
     };
+    const iniciarSolo = async () => {
+      setError('');
+      setCargando(true);
+      try {
+        const todos = await agregarBots(codigo, 2);
+        await iniciarPartida(codigo, cfg, todos);
+      } catch (e) {
+        setError(mensaje(e));
+      }
+      setCargando(false);
+    };
     return (
       <div className="lobby">
         <div className="caja">
@@ -191,7 +202,7 @@ export default function Inicio() {
             {jugadores.map(([id, j]) => (
               <div className="fila" key={id}>
                 <span className="punto" style={{ background: hex(j.color) }} />
-                <span className="nombre">{j.nombre}{id === sala?.anfitrion ? ' 👑' : ''}{id === uid ? ' (tú)' : ''}</span>
+                <span className="nombre">{id.startsWith('bot_') ? '🤖 ' : ''}{j.nombre}{id === sala?.anfitrion ? ' 👑' : ''}{id === uid ? ' (tú)' : ''}</span>
                 <span className="estado">{j.conectado === false ? '⚪ desconectado' : j.listo ? '✅ listo' : '⏳ esperando'}</span>
               </div>
             ))}
@@ -239,6 +250,7 @@ export default function Inicio() {
           </div>
           {esAnfitrion ? (
             <>
+              <button className="btn" disabled={cargando} onClick={iniciarSolo}>🤖 Jugar solo con 2 bots</button>
               <button className="btn" disabled={!todosListos} onClick={iniciar}>Iniciar partida</button>
               {!todosListos && <p>Para iniciar, todos deben tocar "Estoy listo" (mínimo {MIN_JUGADORES} jugadores).</p>}
             </>
