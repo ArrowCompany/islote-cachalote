@@ -401,7 +401,7 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
     } else {
       icono = '';
     }
-    etiquetas += '<rect x="' + f(tx - 46) + '" y="' + f(ty - 24) + '" width="66" height="48" rx="7" fill="#fff7e0" stroke="' + sc + '" stroke-width="2.5"/>' + icono + '<text x="' + f(tx + 1) + '" y="' + f(ty) + '" style="' + txt + 'font-size:16px;fill:#3b2a14" dominant-baseline="middle">' + (dos ? '2:1' : '?   3:1') + '</text>';
+    etiquetas += '<rect x="' + f(tx - 46) + '" y="' + f(ty - 24) + '" width="66" height="48" rx="7" fill="#fff7e0" stroke="' + sc + '" stroke-width="2.5"/>' + icono + '<text x="' + f(dos ? tx + 1 : tx - 13) + '" y="' + f(ty) + '" style="' + txt + 'font-size:16px;fill:#3b2a14" dominant-baseline="middle">' + (dos ? '2:1' : '?   3:1') + '</text>';
   });
   o += etiquetas;
 
