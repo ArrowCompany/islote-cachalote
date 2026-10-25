@@ -16,6 +16,12 @@
 .pildora-reloj { font-size: 18px; white-space: nowrap; }
 .pildora-reloj.urgente { color: #ff8a8a; }
 .aviso { background: rgba(11, 47, 68, 0.92); padding: 6px 12px; border-radius: 10px; font-size: 14px; text-align: center; }
+.aviso-fuerte { background: #a3232b; color: #fff6e8; border: 2px solid #ffd7a8; padding: 8px 14px; border-radius: 12px; font-size: 15px; font-weight: 700; text-align: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); animation: pulso-aviso 1.6s ease-in-out infinite; }
+@keyframes pulso-aviso {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+.ausencias { color: #ffd7a8; font-weight: 700; white-space: nowrap; }
 .salir.flot-der { position: absolute; top: 8px; right: 8px; z-index: 20; font: 700 14px system-ui, sans-serif; padding: 10px 14px; border-radius: 10px; border: 0; background: #f3e6c4; color: #3b2a14; cursor: pointer; }
 @media (max-width: 620px) {
   .flot-centro { top: 64px; max-width: calc(100% - 16px); }

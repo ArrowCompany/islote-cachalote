@@ -202,7 +202,7 @@ export default function Inicio() {
             {jugadores.map(([id, j]) => (
               <div className="fila" key={id}>
                 <span className="punto" style={{ background: hex(j.color) }} />
-                <span className="nombre">{id.startsWith('bot_') ? '🤖 ' : ''}{j.nombre}{id === sala?.anfitrion ? ' 👑' : ''}{id === uid ? ' (tú)' : ''}</span>
+                <span className="nombre">{j.bot || id.startsWith('bot_') ? '🤖 ' : ''}{j.nombre}{id === sala?.anfitrion ? ' 👑' : ''}{id === uid ? ' (tú)' : ''}</span>
                 <span className="estado">{j.conectado === false ? '⚪ desconectado' : j.listo ? '✅ listo' : '⏳ esperando'}</span>
               </div>
             ))}

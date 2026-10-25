@@ -4,7 +4,7 @@ import type { User } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { crearEstadoJuego } from './turnos';
 import type { EstadoJuego, Recursos } from './turnos';
-import { manoVacia } from './reglas';
+import { manoVacia, revisarUltimoHumano } from './reglas';
 import type { CartaDes } from './reglas';
 import { mapaDe } from './tablero';
 import type { Modo } from './tablero';
@@ -22,7 +22,7 @@ export const COLORES: { id: string; nombre: string; hex: string }[] = [
 
 export type Config = { mapa: 'cachalote' | 'catan'; chat: boolean; reloj: 40 | 60 | 90 };
 export type Partida = { modo: Modo; semilla: number };
-export type Jugador = { nombre: string; color: string; listo: boolean; orden: number; conectado?: boolean };
+export type Jugador = { nombre: string; color: string; listo: boolean; orden: number; conectado?: boolean; bot?: boolean };
 export type MensajeChat = { uid: string; nombre: string; texto: string; ts: number };
 export type Sala = {
   anfitrion: string;
@@ -40,6 +40,7 @@ export type Sala = {
 export const CONFIG_INICIAL: Config = { mapa: 'cachalote', chat: true, reloj: 60 };
 
 const esUidBot = (uid: string) => uid.startsWith('bot_');
+const esBotSala = (js: Record<string, Jugador>, uid: string) => esUidBot(uid) || !!js[uid]?.bot;
 
 /** Agrega bots a la sala y devuelve todos los uids ordenados. */
 export async function agregarBots(codigo: string, cantidad: number): Promise<string[]> {
@@ -57,7 +58,7 @@ export async function agregarBots(codigo: string, cantidad: number): Promise<str
       }
       const color = COLORES.find((c) => !usados.has(c.id))?.id ?? 'negro';
       usados.add(color);
-      js[uid] = { nombre: 'Bot ' + n, color, listo: true, orden: Object.keys(js).length, conectado: true };
+      js[uid] = { nombre: 'Bot ' + n, color, listo: true, orden: Object.keys(js).length, conectado: true, bot: true };
       n += 1;
     }
     s.jugadores = js;
@@ -229,12 +230,25 @@ export async function salirSala(codigo: string, uid: string) {
   await runTransaction(ref(db, 'salas/' + codigo), (s: Sala | null) => {
     if (!s) return s;
     const js = s.jugadores ?? {};
+    const j = s.juego;
+    // Si se va en plena partida, su lugar lo ocupa un bot para que el juego no se trabe.
+    if (j && j.fase !== 'fin' && j.orden.includes(uid)) {
+      const previo = js[uid] ?? { nombre: 'Jugador', color: 'negro', listo: true, orden: Object.keys(js).length };
+      js[uid] = { ...previo, conectado: false, bot: true };
+      s.jugadores = js;
+      if (s.anfitrion === uid) {
+        const humano = Object.keys(js).find((id) => id !== uid && !esBotSala(js, id) && js[id]?.conectado !== false);
+        if (humano) s.anfitrion = humano;
+      }
+      revisarUltimoHumano(s, j);
+      return s;
+    }
     delete js[uid];
     const ids = Object.keys(js);
     if (ids.length === 0) return null;
-    if (ids.every(esUidBot)) return null;
+    if (ids.every((id) => esBotSala(js, id))) return null;
     s.jugadores = js;
-    if (s.anfitrion === uid) s.anfitrion = ids[0];
+    if (s.anfitrion === uid) s.anfitrion = ids.find((id) => !esBotSala(js, id)) ?? ids[0];
     return s;
   });
 }

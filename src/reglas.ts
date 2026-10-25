@@ -66,6 +66,12 @@ export type EstadoJuego = {
   ejercito?: { uid: string; n: number };
   camino?: { uid: string; largo: number };
   ganador?: string;
+  /** Turnos principales que cada jugador dejó pasar sin jugar. */
+  ausencias?: Record<string, number>;
+  /** Avisos personales (por uid) que se muestran solo a ese jugador. */
+  avisos?: Record<string, string>;
+  /** Último turno contado como ausencia, para no contar dos veces el mismo turno. */
+  ultimaAusencia?: { uid: string; ronda: number };
 };
 
 export type SalaJuego = {
@@ -73,8 +79,12 @@ export type SalaJuego = {
   juego?: EstadoJuego;
   manos?: Record<string, Recursos>;
   cartas?: Record<string, CartaDes[]>;
-  jugadores?: Record<string, { nombre: string }>;
+  jugadores?: Record<string, { nombre: string; bot?: boolean; conectado?: boolean; color?: string }>;
+  anfitrion?: string;
 };
+
+/** ¿Este jugador lo maneja un bot? (bots de verdad o humanos reemplazados). */
+export const esBotEn = (s: SalaJuego, uid: string): boolean => uid.startsWith('bot_') || !!s.jugadores?.[uid]?.bot;
 
 type Dado = () => number;
 type Azar = () => number;
@@ -155,6 +165,8 @@ export function completar(j: EstadoJuego): EstadoJuego {
     jugoCarta: j.jugoCarta ?? false,
     caminosGratis: j.caminosGratis ?? 0,
     contadorCartas: j.contadorCartas ?? 0,
+    ausencias: j.ausencias ?? {},
+    avisos: j.avisos ?? {},
   };
   if (!sinOferta && base.oferta) base.oferta = { ...base.oferta, da: base.oferta.da ?? {}, pide: base.oferta.pide ?? {}, rechazos: base.oferta.rechazos ?? {} };
   return base;
@@ -420,6 +432,62 @@ function revisarVictoria(s: SalaJuego, j: EstadoJuego) {
     j.ganador = u;
     j.fase = 'fin';
     j.aviso = '🏆 ¡' + nombreDe(s, u) + ' ganó la partida!';
+  }
+}
+
+/** Jugadores que siguen siendo humanos (los bots no cuentan). */
+export function humanosEnJuego(s: SalaJuego, j: EstadoJuego): string[] {
+  return j.orden.filter((u) => !esBotEn(s, u));
+}
+
+/**
+ * Si solo queda un jugador humano y el resto son bots, ese humano gana la partida.
+ * Devuelve true si la partida terminó por esta regla.
+ */
+export function revisarUltimoHumano(s: SalaJuego, j: EstadoJuego): boolean {
+  if (j.fase === 'fin') return false;
+  const humanos = humanosEnJuego(s, j);
+  if (humanos.length > 1) return false;
+  if (humanos.length === 1) {
+    j.ganador = humanos[0];
+    j.fase = 'fin';
+    j.aviso = '🏆 ¡' + nombreDe(s, humanos[0]) + ' ganó la partida! Solo queda un jugador humano y el resto son bots.';
+  } else {
+    delete j.ganador;
+    j.fase = 'fin';
+    j.aviso = 'La partida terminó: ya no quedan jugadores humanos.';
+  }
+  return true;
+}
+
+/** Convierte a un jugador ausente en bot y revisa si la partida ya tiene ganador. */
+export function reemplazarPorBot(s: SalaJuego, j: EstadoJuego, uid: string) {
+  s.jugadores = s.jugadores ?? {};
+  const jug = s.jugadores[uid];
+  if (jug) jug.bot = true;
+  else s.jugadores[uid] = { nombre: nombreDe(s, uid), bot: true };
+  if (j.ausencias) delete j.ausencias[uid];
+  if (j.avisos) delete j.avisos[uid];
+  delete j.ultimaAusencia;
+  j.aviso = '🤖 ' + nombreDe(s, uid) + ' fue reemplazado por un bot por dejar pasar el tiempo';
+  // No cambiamos al anfitrión: su dispositivo suele seguir abierto y es quien mueve a los bots.
+  revisarUltimoHumano(s, j);
+}
+
+/** Cuenta un turno dejado pasar y avisa/reemplaza según corresponda. */
+export function contarAusencia(s: SalaJuego, j: EstadoJuego, uid: string) {
+  if (esBotEn(s, uid)) return;
+  const marca = j.ultimaAusencia;
+  if (marca && marca.uid === uid && marca.ronda === j.rondaTurno) return;
+  j.ultimaAusencia = { uid, ronda: j.rondaTurno };
+  const n = (j.ausencias?.[uid] ?? 0) + 1;
+  j.ausencias = { ...(j.ausencias ?? {}), [uid]: n };
+  if (n === 3) {
+    const texto = 'Van 3 turnos sin jugar. Si dejas pasar el tiempo otra vez, un bot jugará por ti.';
+    j.avisos = { ...(j.avisos ?? {}), [uid]: texto };
+    j.aviso = '⏱ ' + nombreDe(s, uid) + ': ' + texto;
+  } else if (n >= 4) {
+    reemplazarPorBot(s, j, uid);
   }
 }
 
@@ -902,6 +970,9 @@ export function terminarTurnoEn(s: SalaJuego, uid: string, numTurno: number, aho
   if (!ctx) return false;
   const { j } = ctx;
   if (j.fase !== 'accion' || j.numTurno !== numTurno || jugadorActual(j) !== uid) return false;
+  delete j.ausencias?.[uid];
+  if (j.avisos) delete j.avisos[uid];
+  if (j.ultimaAusencia?.uid === uid) delete j.ultimaAusencia;
   avanzarTurno(j, ahora);
   return true;
 }
@@ -917,6 +988,11 @@ export function tiempoAgotadoEn(s: SalaJuego, numTurno: number, ahora: number, d
     });
     cerrarRonda(ctx, ahora);
     return true;
+  }
+  if (j.fase === 'tirar' || j.fase === 'accion') {
+    const uid = jugadorActual(j);
+    if (uid) contarAusencia(s, j, uid);
+    if ((j.fase as Fase) === 'fin') return true;
   }
   if (j.fase === 'colocacion') {
     colocarAlAzar(ctx, ahora, azar);

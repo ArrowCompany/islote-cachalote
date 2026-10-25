@@ -17,6 +17,10 @@ import type { Geometria, Mapa } from './tablero';
 
 export const esBot = (uid: string) => uid.startsWith('bot_');
 
+/** Bot de verdad o humano que fue reemplazado por un bot. */
+export const esBotJugador = (jugadores: Record<string, { bot?: boolean } | undefined> | undefined, uid: string): boolean =>
+  esBot(uid) || !!jugadores?.[uid]?.bot;
+
 // Probabilidad relativa de cada número (fichas): el 6 y el 8 son los mejores.
 const PESO: Record<number, number> = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1 };
 

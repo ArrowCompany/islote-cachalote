@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { COLORES, actualizarRanking } from './salas';
 import type { Sala } from './salas';
-import { esBot, caminoInicial, decidirAccion, elegirDescarte, elegirHexLadron, elegirVictima, manoDeBot, pobladoInicial } from './bots';
+import { esBotJugador, caminoInicial, decidirAccion, elegirDescarte, elegirHexLadron, elegirVictima, manoDeBot, pobladoInicial } from './bots';
 import { aceptarCambio, ahoraServidor, bloquearCambios, cambiarConBanco, cancelarCambio, comprarDesarrollo, construirPieza, descartarCartas, lanzarDadosOrden, mandarLadron, ponerCamino, ponerPoblado, proponerCambio, rechazarCambio, robarCartaA, terminarTurno, tiempoAgotado, tirarDados, usarCarta } from './turnos';
 import { enviarMensaje } from './salas';
 import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_RECURSO, RECURSOS, caminosDePoblado, completar, contarPiezas, jugadorActual, lugaresPara, manoVacia, pendientesOrden, puedePagar, puntosTotales, tasasDe, verticesLibres } from './reglas';
@@ -110,7 +110,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const modo = partida?.modo;
   const semilla = partida?.semilla;
   const geo = useMemo(() => (modo && semilla !== undefined ? geometriaDe(modo, semilla) : null), [modo, semilla]);
-  const bots = useMemo(() => Object.keys(sala.jugadores ?? {}).filter(esBot), [sala.jugadores]);
+  const bots = useMemo(
+    () => Object.keys(sala.jugadores ?? {}).filter((id) => esBotJugador(sala.jugadores, id)),
+    [sala.jugadores],
+  );
   const hayJuego = !!juego && !!partida;
   const reloj = sala.config?.reloj ?? 60;
   const hayChat = sala.config?.chat !== false;
@@ -118,7 +121,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const inicio = juego?.inicioTurno ?? 0;
   const numTurno = juego?.numTurno ?? 0;
   const actualUid = juego ? jugadorActual(juego) : '';
-  const soyActual = actualUid === uid;
+  const soyBot = esBotJugador(sala.jugadores, uid);
+  const soyActual = actualUid === uid && !soyBot;
   const soyAnfitrion = sala.anfitrion === uid;
 
   const [rodando, setRodando] = useState(false);
@@ -259,7 +263,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     if (faseActual !== 'fin' || rankingRegistrado.current || !juego) return;
     rankingRegistrado.current = true;
     juego.orden.forEach((id) => {
-      if (esBot(id)) return;
+      if (esBotJugador(sala.jugadores, id)) return;
       const pts = puntosTotales(sala, juego, id);
       const nombre = nombreDe(id);
       void actualizarRanking(nombre, pts);
@@ -600,6 +604,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               </span>
             ))}
           </div>
+          {juego.avisos?.[uid] ? <div className="aviso-fuerte">⚠️ {juego.avisos[uid]}</div> : null}
+          {soyBot ? <div className="aviso">🤖 Estás siendo reemplazado por un bot porque dejaste pasar el tiempo.</div> : null}
           {juego.aviso ? <div className="aviso">{juego.aviso}</div> : null}
         </div>
 
@@ -617,8 +623,14 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
                 <div key={id} className={id === actualUid ? 'jug actual' : 'jug'}>
                   <div className="jug-nombre">
                     <span className="punto" style={{ background: colorJ(id) }} />
-                    <span>{enOrden ? '' : i + 1 + '. '}{nombreDe(id)}{id === uid ? ' (tú)' : ''}</span>
+                    <span>
+                      {enOrden ? '' : i + 1 + '. '}{nombreDe(id)}{id === uid ? ' (tú)' : ''}
+                      {esBotJugador(sala.jugadores, id) ? ' 🤖' : ''}
+                    </span>
                     {sala.jugadores?.[id]?.conectado === false && <span> ⚪</span>}
+                    {!esBotJugador(sala.jugadores, id) && (juego.ausencias?.[id] ?? 0) > 0 && (
+                      <span className="ausencias" title="Turnos dejados pasar sin jugar">⏱ {juego.ausencias?.[id]}/3</span>
+                    )}
                   </div>
                   <div className="jug-datos">🃏 {e.cartas} · 🎴 {e.desarrollo} · ⚔️ {e.caballeros} · ⭐ {e.puntos}</div>
                 </div>
