@@ -53,11 +53,13 @@ export function IconoRecurso({ tipo }: { tipo: Recurso }) {
       </g>
     ),
     ore: (
-      <g strokeWidth="1.5" stroke="#5c6275">
-        <path d="M4 38L11 24H37L44 38Z" fill="#b8bcc7" />
-        <path d="M4 38H44V44H4Z" fill="#8b90a0" />
-        <path d="M13 24L18 14H30L35 24Z" fill="#d9dde6" />
-        <path d="M18 14L22 8H26L30 14Z" fill="#eef0f5" />
+      <g>
+        <ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26" />
+        <path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" fill="none" />
+        <path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+        <path d="M17 33H31M19 24H29M20.5 15H27.5" stroke="#4b5160" strokeWidth="1.6" fill="none" />
+        <rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" strokeWidth="1.3" />
+        <circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" strokeWidth="0.8" />
       </g>
     ),
   };

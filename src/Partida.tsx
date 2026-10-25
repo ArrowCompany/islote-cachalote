@@ -124,6 +124,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [error, setError] = useState('');
   const [panel, setPanel] = useState<Panel>('ninguno');
   const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
+  const [pendiente, setPendiente] = useState<{ tipo: 'poblado'; id: string } | null>(null);
   const [cambio, setCambio] = useState(false);
   const [pestana, setPestana] = useState<Pestana>('jugadores');
   const [ofDa, setOfDa] = useState<Recursos>(manoVacia());
@@ -177,6 +178,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
   useEffect(() => {
     setConstruyendo(null);
+    setPendiente(null);
     setCambio(false);
     setOfDa(manoVacia());
     setOfPide(manoVacia());
@@ -343,6 +345,16 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     setConstruyendo(null);
     void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
   };
+  const confirmarPendiente = () => {
+    if (!pendiente) return;
+    const id = pendiente.id;
+    setPendiente(null);
+    if (miTurnoColocar) void poner(id);
+    else {
+      setConstruyendo(null);
+      void intentar(() => construirPieza(codigo, uid, numTurno, 'poblado', id), 'No pude construir, intenta otra vez');
+    }
+  };
   const [br, bc] = juego.ladron.split(',').map(Number);
   const [bx, by] = posicion(partida.modo, br, bc);
 
@@ -384,16 +396,24 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
       })}
       {hexesMover.map((h) => (
         <g key={h.r + ',' + h.c} onClick={() => moverCachalote(h.r + ',' + h.c)} style={{ cursor: 'pointer' }}>
-          <path d={hexPath(h.x, h.y, 40)} fill="rgba(255,255,255,0.08)" />
-          <path className="hot-hex" d={hexPath(h.x, h.y, 34)} />
+          <path d={hexPath(h.x, h.y, 46)} fill="rgba(255,255,255,0.08)" />
+          <path className="hot-hex" d={hexPath(h.x, h.y, 40)} />
         </g>
       ))}
       {vValidos.map((v) => (
-        <g key={v} onClick={() => (miTurnoColocar ? void poner(v) : construirAqui(v))} style={{ cursor: 'pointer' }}>
+        <g key={v} onClick={() => {
+          if (miTurnoColocar || construyendo === 'poblado') setPendiente({ tipo: 'poblado', id: v });
+          else construirAqui(v);
+        }} style={{ cursor: 'pointer' }}>
           <circle cx={geo.vertices[v].x} cy={geo.vertices[v].y} r={19} fill="transparent" />
           <circle className="hot" cx={geo.vertices[v].x} cy={geo.vertices[v].y} r={10} />
         </g>
       ))}
+      {pendiente && geo.vertices[pendiente.id] && (
+        <g transform={`translate(${geo.vertices[pendiente.id].x} ${geo.vertices[pendiente.id].y}) scale(0.95)`} opacity={0.5} pointerEvents="none">
+          <FormaPoblado color={miColor} />
+        </g>
+      )}
     </g>
   );
 
@@ -453,6 +473,13 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               flotante
               mesa
             />
+            {pendiente && (
+              <div className="barra-confirmar">
+                <span>¿Poner el poblado aquí?</span>
+                <button className="vx" onClick={() => setPendiente(null)}>✕</button>
+                <button className="vv" onClick={confirmarPendiente}>✔</button>
+              </div>
+            )}
           </div>
         )}
 

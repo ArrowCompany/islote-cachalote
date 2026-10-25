@@ -11,9 +11,9 @@ export type Vertice = { id: string; x: number; y: number; hexes: Celda[]; vecino
 export type Arista = { id: string; a: string; b: string };
 export type Geometria = { vertices: Record<string, Vertice>; aristas: Record<string, Arista>; listaV: Vertice[]; listaA: Arista[] };
 
-const S = 40;
+const S = 46;
 const W = Math.sqrt(3) * S;
-const RH = 60;
+const RH = 69;
 const K = S / 46;
 
 const TIERRAS: Record<Modo, Record<number, number[]>> = {
@@ -22,7 +22,7 @@ const TIERRAS: Record<Modo, Record<number, number[]>> = {
   cp: { 0: [1, 2, 3], 1: [0, 1, 2, 3], 2: [0, 1, 2, 3, 4], 3: [0, 1, 2, 3], 4: [1, 2, 3] },
   cg: { 0: [3, 4, 5], 1: [2, 3, 4, 5], 2: [2, 3, 4, 5, 6], 3: [1, 2, 3, 4, 5, 6], 4: [2, 3, 4, 5, 6], 5: [2, 3, 4, 5], 6: [3, 4, 5] },
 };
-export const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8f7bdc', desert: '#ead9a3' };
+export const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8c93a0', desert: '#ead9a3' };
 const IN = 'M0 -42L36.4 -21V21L0 42L-36.4 21V-21Z';
 
 const f = (n: number) => n.toFixed(1);
@@ -85,7 +85,7 @@ const D: Record<string, (rn: Rng) => string> = {
       s += 'M' + x + ' ' + y + 'l-1.6 -4M' + x + ' ' + y + 'l0 -5M' + x + ' ' + y + 'l1.6 -4';
     }
     s = '<path d="' + s + '" stroke="#5f8a2a" stroke-width="1.1" fill="none"/>';
-    const ovejas: Celda[] = [[-14, -10], [10, -16], [-4, 8], [18, 8], [-22, 12]];
+    const ovejas: Celda[] = [[-26, 0], [-10, -20], [12, -22], [24, 0], [0, 20]];
     ovejas.forEach(([x, y]) => {
       s += '<ellipse cx="' + x + '" cy="' + (y + 7) + '" rx="10" ry="2.8" fill="#3d5a14" opacity=".4"/><path d="M' + (x - 4) + ' ' + (y + 3) + 'v5M' + (x + 4) + ' ' + (y + 3) + 'v5" stroke="#3b2a14" stroke-width="1.3"/><g fill="#fffdf4" stroke="#c9d2b0" stroke-width=".5"><circle cx="' + (x - 4) + '" cy="' + y + '" r="5.5"/><circle cx="' + (x + 3) + '" cy="' + (y - 1) + '" r="6"/><circle cx="' + x + '" cy="' + (y + 2) + '" r="5.5"/></g><ellipse cx="' + (x + 9) + '" cy="' + (y + 1) + '" rx="3.5" ry="3" fill="#3b2a14"/><circle cx="' + (x + 8) + '" cy="' + (y - 2) + '" r="1.6" fill="#3b2a14"/>';
     });
@@ -103,7 +103,7 @@ const D: Record<string, (rn: Rng) => string> = {
     }
     return '<path d="M-36 -12Q0 -24 36 -12M-36 4Q0 -8 36 4M-36 20Q0 8 36 20" stroke="#d9a21f" stroke-width="6" fill="none" opacity=".5"/><path d="' + a + '" stroke="#b98a14" stroke-width="1.2" fill="none"/><path d="' + b + '" fill="#f0a91d" stroke="#a87a0c" stroke-width=".4"/>';
   },
-  ore: () => '<path d="M-10 -22L-34 18L-8 18Z" fill="#8b79da"/><path d="M-10 -22L-8 18L16 18Z" fill="#4d3f95"/><path d="M-10 -22L-17 -9L-12 -12L-9 -6L-6 -12L-2 -9Z" fill="#fff7e0"/><path d="M18 -10L2 18H20Z" fill="#9a88e6"/><path d="M18 -10L20 18H36Z" fill="#5a4aa6"/><path d="M18 -10L13 -1L17 -3L20 1L22 -4Z" fill="#fff7e0"/><path d="M-4 18V10Q0 3 4 10V18Z" fill="#1b1330"/><path d="M-26 -6L-24 -22L-21 -6Z" fill="#efe8ff"/><path d="M-21 -6L-18 -16L-15 -6Z" fill="#c5b7f5"/><path d="M-26 -6L-22 -6L-24 -22Z" fill="#a898ec"/><path d="M24 24L26 14L29 24Z" fill="#efe8ff"/>',
+  ore: () => '<g transform="translate(-24,-12) scale(1.05)"><ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26"/><path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" stroke-width="2.6" stroke-linecap="round" fill="none"/><path d="M17 33H31M19 24H29M20.5 15H27.5" stroke="#4b5160" stroke-width="1.6" fill="none"/><rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" stroke-width="1.3"/><circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" stroke-width=".8"/></g>',
   desert: () => '<path d="M-34 12Q-14 -10 10 6Q-10 2 -34 12Z" fill="#d3bd82"/><path d="M-12 28Q10 8 36 16Q16 16 -12 28Z" fill="#d3bd82"/><path d="M-30 -8Q-15 -20 0 -8T30 -8" stroke="#c9b278" stroke-width="1.6" fill="none"/><ellipse cx="-20" cy="16" rx="6" ry="3.5" fill="#a58f5a"/><ellipse cx="22" cy="20" rx="4" ry="2.5" fill="#a58f5a"/><rect x="18" y="-26" width="5" height="17" rx="2.5" fill="#3a8a55"/><rect x="12" y="-21" width="7" height="3" rx="1.5" fill="#3a8a55"/><rect x="22" y="-19" width="6" height="3" rx="1.5" fill="#3a8a55"/>',
 };
 
@@ -387,20 +387,26 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
     o += '<ellipse cx="' + f(bx) + '" cy="' + f(by + 9) + '" rx="14" ry="3" fill="#06202e" opacity=".4"/><path d="M' + f(bx - 13) + ' ' + f(by) + 'L' + f(bx + 13) + ' ' + f(by) + 'L' + f(bx + 9) + ' ' + f(by + 8) + 'L' + f(bx - 9) + ' ' + f(by + 8) + 'Z" fill="#e8607f"/><path d="M' + f(bx) + ' ' + f(by - 20) + 'V' + f(by) + '" stroke="#6b4423" stroke-width="1.6"/><path d="M' + f(bx + 1.5) + ' ' + f(by - 19) + 'L' + f(bx + 12) + ' ' + f(by - 3) + 'L' + f(bx + 1.5) + ' ' + f(by - 3) + 'Z" fill="#fff7e0"/>';
     const sc = pu.tipo === '3' ? '#8a5a2b' : COLOR[pu.tipo];
     const tx = qx - ux * 24, ty = qy - uy * 24, dos = pu.tipo !== '3';
-    etiquetas += '<rect x="' + f(tx - 24) + '" y="' + f(ty - 13) + '" width="48" height="26" rx="8" fill="#fff7e0" stroke="' + sc + '" stroke-width="3"/>' + (dos ? '<circle cx="' + f(tx - 12) + '" cy="' + f(ty) + '" r="5.5" fill="' + sc + '"/>' : '') + '<text x="' + f(tx + (dos ? 7 : 0)) + '" y="' + f(ty + 6) + '" style="' + txt + 'font-size:16px;fill:#3b2a14">' + (dos ? '2:1' : '3:1') + '</text>';
+    let icono = '';
+    if (dos) {
+      const r = pu.tipo as string;
+      const svgIcon = r === 'wood' ? '<g stroke-width="1.6" stroke="#5a3b1e"><rect x="3" y="28" width="32" height="11" rx="5.5" fill="#8a5a2b"/><circle cx="33" cy="33.5" r="5.5" fill="#ecc88e"/><rect x="9" y="16" width="32" height="11" rx="5.5" fill="#a06a33"/><circle cx="39" cy="21.5" r="5.5" fill="#f3d9a6"/><rect x="5" y="5" width="30" height="10" rx="5" fill="#8a5a2b"/><circle cx="33" cy="10" r="5" fill="#ecc88e"/></g>'
+        : r === 'brick' ? '<g stroke-width="1.6" stroke="#7a1f1a"><rect x="3" y="30" width="20" height="11" rx="2" fill="#d6453d"/><rect x="25" y="30" width="20" height="11" rx="2" fill="#c93a32"/><rect x="14" y="18" width="20" height="11" rx="2" fill="#e0574e"/><rect x="14" y="6" width="20" height="11" rx="2" fill="#d6453d"/></g>'
+        : r === 'wool' ? '<g><path d="M15 36v8M31 36v8" stroke="#3b2a14" stroke-width="3.5" stroke-linecap="round"/><g fill="#fffdf4" stroke="#b8c0a0" stroke-width="1.2"><circle cx="16" cy="24" r="10"/><circle cx="27" cy="21" r="10"/><circle cx="23" cy="31" r="9"/></g><ellipse cx="39" cy="26" rx="5.5" ry="6.5" fill="#3b2a14"/></g>'
+        : r === 'grain' ? '<g><path d="M24 45V13" stroke="#9a7a1c" stroke-width="2.6" stroke-linecap="round"/><g fill="#f2c23c" stroke="#b98a14" stroke-width="1"><ellipse cx="24" cy="7" rx="3.6" ry="6"/><ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)"/><ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)"/></g></g>'
+        : r === 'ore' ? '<g><ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26"/><path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" stroke-width="2.6" stroke-linecap="round" fill="none"/><rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" stroke-width="1.3"/><circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" stroke-width=".8"/></g>'
+        : '';
+      icono = '<g transform="translate(' + f(tx - 22) + ',' + f(ty - 13) + ') scale(0.4)">' + svgIcon + '</g>';
+    } else {
+      icono = '<text x="' + f(tx) + '" y="' + f(ty - 14) + '" style="' + txt + 'font-size:18px;fill:#3b2a14">?</text>';
+    }
+    etiquetas += '<rect x="' + f(tx - 24) + '" y="' + f(ty - 13) + '" width="48" height="26" rx="8" fill="#fff7e0" stroke="' + sc + '" stroke-width="3"/>' + icono + '<text x="' + f(tx + (dos ? 8 : 0)) + '" y="' + f(ty + 6) + '" style="' + txt + 'font-size:16px;fill:#3b2a14">' + (dos ? '2:1' : '3:1') + '</text>';
   });
   o += etiquetas;
 
-  const bajo = modo === 'cg' ? 58 : 0;
   if (!esCatan(modo)) {
     const s0 = posicion(modo, 0, 1);
     o += '<g transform="translate(' + f(s0[0] + 9) + ',' + f(s0[1] - 38) + ') scale(2.2)"><path d="M0 0q-2 -9 -9 -8M0 0q2 -9 9 -8M0 0v-10" stroke="#d8f4ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>';
   }
-  o += '<text x="430" y="' + (552 + bajo) + '" style="font-family:Georgia,serif;font-weight:600;text-anchor:middle;font-size:34px;fill:#f3e6c4">Islote Cachalote</text>';
-  const leyenda: [string, string][] = [['wood', 'Madera'], ['brick', 'Ladrillo'], ['wool', 'Lana'], ['grain', 'Trigo'], ['ore', 'Mineral']];
-  leyenda.forEach(([t, nombre], i) => {
-    const x = 110 + i * 130;
-    o += '<rect x="' + x + '" y="' + (582 + bajo) + '" width="18" height="18" rx="4" fill="' + COLOR[t] + '"/><text x="' + (x + 26) + '" y="' + (597 + bajo) + '" style="font-family:system-ui,sans-serif;font-size:18px;fill:#f3e6c4">' + nombre + '</text>';
-  });
   return o;
 }
