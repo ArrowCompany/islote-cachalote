@@ -10,29 +10,34 @@ import type { Modo } from './tablero';
 import { cargarThree } from './vista3d/cargar';
 import { montarEscena } from './vista3d/escena';
 import type { Control3D } from './vista3d/escena';
+import type { PiezasVista } from './vista3d/piezas3d';
 import './vista3d.css';
 
 type Props = {
   modo: Modo;
   semilla: number;
+  /** Caminos, poblados, ciudades y ladrón del estado actual (si hay partida). */
+  piezas?: PiezasVista | null;
   /** Entrega el control de la cámara al padre (para los botones de zoom). */
   onListo?: (control: Control3D | null) => void;
   /** Se llama si no se pudo cargar Three.js o no hay WebGL. */
   onFallo?: (error: unknown) => void;
 };
 
-export default function Juego3D({ modo, semilla, onListo, onFallo }: Props) {
+export default function Juego3D({ modo, semilla, piezas, onListo, onFallo }: Props) {
   const caja = useRef<HTMLDivElement | null>(null);
   const control = useRef<Control3D | null>(null);
   const avisos = useRef({ onListo, onFallo });
+  const piezasRef = useRef<PiezasVista | null>(piezas ?? null);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const [detalle, setDetalle] = useState('');
   const [intento, setIntento] = useState(0);
 
-  // Siempre se usan los callbacks más recientes sin reiniciar la escena.
+  // Siempre se usan los callbacks y las piezas más recientes sin reiniciar la escena.
   useEffect(() => {
     avisos.current = { onListo, onFallo };
   });
+  piezasRef.current = piezas ?? null;
 
   useEffect(() => {
     let vivo = true;
@@ -49,6 +54,7 @@ export default function Juego3D({ modo, semilla, onListo, onFallo }: Props) {
           escena.destruir();
           return;
         }
+        escena.piezas(piezasRef.current);
         control.current = escena;
         avisos.current.onListo?.(escena);
         setEstado('listo');
@@ -67,6 +73,12 @@ export default function Juego3D({ modo, semilla, onListo, onFallo }: Props) {
       escena?.destruir();
     };
   }, [modo, semilla, intento]);
+
+  // Cambios de la partida (nuevos caminos, poblados, ciudades o ladrón) se
+  // aplican en caliente, sin reconstruir la escena.
+  useEffect(() => {
+    if (estado === 'listo') control.current?.piezas(piezas ?? null);
+  }, [piezas, estado]);
 
   return (
     <div className="vista3d" ref={caja}>

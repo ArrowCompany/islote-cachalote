@@ -4,13 +4,14 @@ import { dibujarTablero } from './tablero';
 import type { Modo } from './tablero';
 import Juego3D from './Juego3D';
 import type { Control3D } from './vista3d/escena';
+import type { PiezasVista } from './vista3d/piezas3d';
 import './juego.css';
 
 type Punto = { x: number; y: number };
-type Props = { modo?: Modo; semilla?: number; overlay?: ReactNode; fondo?: ReactNode; sinBallena?: boolean; flotante?: boolean; mesa?: boolean };
+type Props = { modo?: Modo; semilla?: number; overlay?: ReactNode; fondo?: ReactNode; sinBallena?: boolean; flotante?: boolean; mesa?: boolean; piezas?: PiezasVista | null };
 const INICIO = { x: 0, y: 0, k: 1 };
 
-export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, fondo, sinBallena, flotante, mesa }: Props) {
+export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, fondo, sinBallena, flotante, mesa, piezas }: Props) {
   const fijo = modoFijo !== undefined && semillaFija !== undefined;
   const [tam, setTam] = useState<'p' | 'g'>('p');
   const [forma, setForma] = useState<'cachalote' | 'catan'>('cachalote');
@@ -134,6 +135,7 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
           <Juego3D
             modo={modo}
             semilla={semilla}
+            piezas={piezas}
             onListo={(c) => {
               control3d.current = c;
             }}

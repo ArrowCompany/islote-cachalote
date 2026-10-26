@@ -8,6 +8,7 @@ import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_REC
 import type { CartaDes, ParamCarta, Recurso, Recursos, TipoPieza } from './reglas';
 import { COLOR, ballena, geometriaDe, mapaDe, posicion } from './tablero';
 import Juego from './Juego';
+import type { PiezasVista } from './vista3d/piezas3d';
 import * as sonido from './sonido';
 import type { ModoSonido } from './sonido';
 import Mesa from './Mesa';
@@ -110,6 +111,15 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const modo = partida?.modo;
   const semilla = partida?.semilla;
   const geo = useMemo(() => (modo && semilla !== undefined ? geometriaDe(modo, semilla) : null), [modo, semilla]);
+
+  // "Foto" de las piezas para la vista 3D: mismos datos que el SVG, con el
+  // color ya resuelto de cada jugador.
+  const piezas3d = useMemo<PiezasVista | null>(() => {
+    if (!juego || !geo) return null;
+    const colores: Record<string, string> = {};
+    for (const id of juego.orden) colores[id] = colorDe(sala.jugadores?.[id]?.color ?? '');
+    return { poblados: juego.poblados, caminos: juego.caminos, colores, ladron: juego.ladron };
+  }, [juego, geo, sala.jugadores]);
   const bots = useMemo(
     () => Object.keys(sala.jugadores ?? {}).filter((id) => esBotJugador(sala.jugadores, id)),
     [sala.jugadores],
@@ -567,6 +577,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               sinBallena
               flotante
               mesa
+              piezas={piezas3d}
             />
             {pendiente && (
               <div className="barra-confirmar">

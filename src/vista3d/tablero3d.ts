@@ -334,13 +334,12 @@ function instanciar(T: Three, geo: BufferGeometry, mat: MeshStandardMaterial, li
 }
 
 /**
- * Construye el tablero completo y devuelve el grupo con todo dentro.
- * El tablero queda centrado en el origen (0, 0, 0).
+ * Proyección de coordenadas del mapa 2D (píxeles del SVG) a mundo 3D (X, Z).
+ * Centra la isla en el origen, igual que hace el tablero. La usan también las
+ * piezas, para que caminos y poblados caigan exactamente en sus aristas y
+ * vértices sin repetir el cálculo del centro.
  */
-export function crearTablero(T: Three, mapa: Mapa): Tablero {
-  const grupo = new T.Group();
-
-  // --- Centrar el mapa en el origen ---
+export function proyectoMapa(mapa: Mapa): (x: number, y: number) => readonly [number, number] {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -353,7 +352,16 @@ export function crearTablero(T: Three, mapa: Mapa): Tablero {
   }
   const centroX = (minX + maxX) / 2;
   const centroY = (minY + maxY) / 2;
-  const aMundo = (x: number, y: number) => [(x - centroX) / S, (y - centroY) / S] as const;
+  return (x, y) => [(x - centroX) / S, (y - centroY) / S] as const;
+}
+
+/**
+ * Construye el tablero completo y devuelve el grupo con todo dentro.
+ * El tablero queda centrado en el origen (0, 0, 0).
+ */
+export function crearTablero(T: Three, mapa: Mapa): Tablero {
+  const grupo = new T.Group();
+  const aMundo = proyectoMapa(mapa);
 
   // --- Agua: plano grande con degradado y hexágonos de mar somero ---
   const agua = new T.Mesh(

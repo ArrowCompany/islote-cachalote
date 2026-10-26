@@ -6,16 +6,21 @@
  * batería en móvil.
  */
 import type { Material, Mesh, Object3D } from 'three';
+import { geometriaDe } from '../tablero';
 import type { Mapa } from '../tablero';
 import type { Three } from './cargar';
 import { crearOrbita } from './camara';
-import { crearTablero } from './tablero3d';
+import { crearPiezas } from './piezas3d';
+import type { PiezasVista } from './piezas3d';
+import { crearTablero, proyectoMapa } from './tablero3d';
 
 export type Control3D = {
   acercar: (factor: number) => void;
   girar: (grados: number) => void;
   /** Vuelve a la vista inicial y reencuadra el tablero. */
   reiniciar: () => void;
+  /** Actualiza caminos, poblados, ciudades y ladrón. */
+  piezas: (piezas: PiezasVista | null) => void;
   destruir: () => void;
 };
 
@@ -41,10 +46,14 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
   const tablero = crearTablero(T, mapa);
   escena.add(tablero.grupo);
 
+  // Piezas de los jugadores: reciben su estado desde React y se animan aquí.
+  const piezas3d = crearPiezas(T, mapa, geometriaDe(mapa.modo, mapa.semilla), proyectoMapa(mapa));
+  escena.add(piezas3d.grupo);
+
   // Herramienta de depuración (solo en desarrollo): deja la escena accesible
   // para poder proyectar puntos del mundo a píxeles y comprobar el render.
   if (import.meta.env.DEV) {
-    (window as Window & { __islote3d?: unknown }).__islote3d = { T, escena, camara, renderer, tablero };
+    (window as Window & { __islote3d?: unknown }).__islote3d = { T, escena, camara, renderer, tablero, piezas: piezas3d };
   }
 
   // --- Luces ---
@@ -86,9 +95,10 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
     raf = 0;
     const dt = ultimo ? Math.min(0.05, (t - ultimo) / 1000) : 0.016;
     ultimo = t;
-    const animando = orbita.paso(dt);
+    const animandoCamara = orbita.paso(dt);
+    const animandoPiezas = piezas3d.animar(dt);
     renderer.render(escena, camara);
-    if (animando) pedir();
+    if (animandoCamara || animandoPiezas) pedir();
   };
 
   const orbita = crearOrbita(T, camara, caja, pedir);
@@ -137,6 +147,7 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
     raf = 0;
     observador.disconnect();
     orbita.destruir();
+    piezas3d.destruir();
     liberar(escena);
     renderer.dispose();
     renderer.forceContextLoss();
@@ -148,6 +159,9 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
     acercar: (factor) => orbita.acercar(factor),
     girar: (grados) => orbita.girar(grados),
     reiniciar: () => orbita.reiniciar(),
+    piezas: (estado) => {
+      if (piezas3d.actualizar(estado)) pedir();
+    },
     destruir,
   };
 }
