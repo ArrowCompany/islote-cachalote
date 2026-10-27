@@ -19,8 +19,9 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
   const modoLibre: Modo = forma === 'catan' ? (tam === 'p' ? 'cp' : 'cg') : tam;
   const [semillaLibre, setSemillaLibre] = useState(11);
   const [vista, setVista] = useState(INICIO);
-  // Vista 3D: arranca en 3D para disfrutar las animaciones.
-  const [vista3d, setVista3d] = useState(true);
+  // Vista 3D: ocultada temporalmente para centrarse en el 2D.
+  const TRES_D_HABILITADO = false;
+  const [vista3d, setVista3d] = useState(false);
   const control3d = useRef<Control3D | null>(null);
   const modo: Modo = modoFijo ?? modoLibre;
   const semilla: number = semillaFija ?? semillaLibre;
@@ -115,7 +116,7 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
             <button className={forma === 'catan' ? 'on' : ''} onClick={() => setForma('catan')}>🏝️ Tipo Catan</button>
           </>
         )}
-        <button className={vista3d ? 'on' : ''} onClick={alternarVista}>{vista3d ? '🗺️ 2D' : '🧊 3D'}</button>
+        {TRES_D_HABILITADO && <button className={vista3d ? 'on' : ''} onClick={alternarVista}>{vista3d ? '🗺️ 2D' : '🧊 3D'}</button>}
         <button className="on" onClick={() => zoom(1.25)}>+</button>
         <button className="on" onClick={() => zoom(0.8)}>−</button>
         <button className="on" onClick={centrar}>Centrar</button>
