@@ -571,7 +571,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const cy = (va.y + vb.y) / 2;
         const dx = vb.x - va.x;
         const dy = vb.y - va.y;
-        const len = Math.hypot(dx, dy);
+        const len = Math.hypot(dx, dy) * 0.7;
         const ang = Math.atan2(dy, dx) * 180 / Math.PI;
         return (
           <g key={e} pointerEvents="none">

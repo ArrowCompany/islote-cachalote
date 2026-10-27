@@ -90,7 +90,7 @@ export function listones(x1: number, y1: number, x2: number, y2: number, k: numb
 export function FormaPoblado({ color }: { color: string }) {
   const borde = oscurecer(color, 0.5);
   return (
-    <g>
+    <g transform="translate(-20 -40)">
       <polygon points="18,8 26,5 38,19 30,22" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
       <polygon points="18,8 26,5 38,19 30,22" fill="#fff" fillOpacity={0.25} stroke="none" />
       <polygon points="30,22 38,19 38,36 30,40" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
@@ -103,7 +103,7 @@ export function FormaPoblado({ color }: { color: string }) {
 export function FormaCiudad({ color }: { color: string }) {
   const borde = oscurecer(color, 0.5);
   return (
-    <g>
+    <g transform="translate(-35 -49)">
       <polygon points="26,34 32,28 66,28 60,34" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
       <polygon points="26,34 32,28 66,28 60,34" fill="#fff" fillOpacity={0.25} stroke="none" />
       <polygon points="60,34 66,28 66,48 60,52" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
