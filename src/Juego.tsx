@@ -5,21 +5,22 @@ import type { Modo } from './tablero';
 import Juego3D from './Juego3D';
 import type { Control3D } from './vista3d/escena';
 import type { PiezasVista } from './vista3d/piezas3d';
+import type { CartaVuelo } from './vista3d/vuelo3d';
 import './juego.css';
 
 type Punto = { x: number; y: number };
-type Props = { modo?: Modo; semilla?: number; overlay?: ReactNode; fondo?: ReactNode; sinBallena?: boolean; flotante?: boolean; mesa?: boolean; piezas?: PiezasVista | null };
+type Props = { modo?: Modo; semilla?: number; overlay?: ReactNode; fondo?: ReactNode; sinBallena?: boolean; flotante?: boolean; mesa?: boolean; piezas?: PiezasVista | null; controlRef?: React.MutableRefObject<Control3D | null>; dados?: [number, number] | null; evento3d?: { id: number; dados: [number, number]; cartas: CartaVuelo[] } | null };
 const INICIO = { x: 0, y: 0, k: 1 };
 
-export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, fondo, sinBallena, flotante, mesa, piezas }: Props) {
+export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, fondo, sinBallena, flotante, mesa, piezas, controlRef, dados, evento3d }: Props) {
   const fijo = modoFijo !== undefined && semillaFija !== undefined;
   const [tam, setTam] = useState<'p' | 'g'>('p');
   const [forma, setForma] = useState<'cachalote' | 'catan'>('cachalote');
   const modoLibre: Modo = forma === 'catan' ? (tam === 'p' ? 'cp' : 'cg') : tam;
   const [semillaLibre, setSemillaLibre] = useState(11);
   const [vista, setVista] = useState(INICIO);
-  // Vista 3D (Etapa 1: solo tablero). Arranca siempre en 2D para poder jugar.
-  const [vista3d, setVista3d] = useState(false);
+  // Vista 3D: arranca en 3D para disfrutar las animaciones.
+  const [vista3d, setVista3d] = useState(true);
   const control3d = useRef<Control3D | null>(null);
   const modo: Modo = modoFijo ?? modoLibre;
   const semilla: number = semillaFija ?? semillaLibre;
@@ -136,8 +137,11 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
             modo={modo}
             semilla={semilla}
             piezas={piezas}
+            dados={dados}
+            evento3d={evento3d}
             onListo={(c) => {
               control3d.current = c;
+              if (controlRef) controlRef.current = c;
             }}
             onFallo={() => setVista3d(false)}
           />

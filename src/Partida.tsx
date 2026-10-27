@@ -8,7 +8,9 @@ import { COSTO, COSTO_CARTA, DESCRIPCION_CARTA, LIMITE, NOMBRE_CARTA, NOMBRE_REC
 import type { CartaDes, ParamCarta, Recurso, Recursos, TipoPieza } from './reglas';
 import { COLOR, ballena, geometriaDe, mapaDe, posicion } from './tablero';
 import Juego from './Juego';
+import type { CartaVuelo } from './vista3d/vuelo3d';
 import type { PiezasVista } from './vista3d/piezas3d';
+import type { Control3D } from './vista3d/escena';
 import * as sonido from './sonido';
 import type { ModoSonido } from './sonido';
 import Mesa from './Mesa';
@@ -112,6 +114,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const semilla = partida?.semilla;
   const geo = useMemo(() => (modo && semilla !== undefined ? geometriaDe(modo, semilla) : null), [modo, semilla]);
 
+  // Evento 3D para la tirada de dados y el vuelo de cartas.
+  const [evento3d, setEvento3d] = useState<{ id: number; dados: [number, number]; cartas: CartaVuelo[] } | null>(null);
+  const ultimoDado = useRef<string | null>(null);
+
   // "Foto" de las piezas para la vista 3D: mismos datos que el SVG, con el
   // color ya resuelto de cada jugador.
   const piezas3d = useMemo<PiezasVista | null>(() => {
@@ -120,6 +126,39 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     for (const id of juego.orden) colores[id] = colorDe(sala.jugadores?.[id]?.color ?? '');
     return { poblados: juego.poblados, caminos: juego.caminos, colores, ladron: juego.ladron };
   }, [juego, geo, sala.jugadores]);
+
+  // Dispara la animación 3D cuando cambian los dados: primero ruedan los dados,
+  // y al terminar vuelan las cartas de los hexágonos productores a cada mano.
+  useEffect(() => {
+    if (!juego?.dados || !geo || !partida) return;
+    const clave = (juego.tirada ?? 0) + ':' + juego.dados.join(',');
+    if (ultimoDado.current === clave) return;
+    const primera = ultimoDado.current === null;
+    ultimoDado.current = clave;
+    if (primera) return; // Al cargar una partida en marcha no animar
+
+    const mapa = mapaDe(partida?.modo ?? 'p', partida?.semilla ?? 0);
+    const suma = juego.dados[0] + juego.dados[1];
+    const cartas: CartaVuelo[] = [];
+    for (const [v, p] of Object.entries(juego.poblados)) {
+      const verts = geo.vertices[v];
+      if (!verts) continue;
+      const n = p.tipo === 'ciudad' ? 2 : 1;
+      for (const [r, c] of verts.hexes) {
+        const h = mapa.hexes.find((x) => x.r === r && x.c === c);
+        if (!h || h.tipo === 'desert' || h.num !== suma || r + ',' + c === juego.ladron) continue;
+        const chip = (typeof document !== 'undefined') ? document.querySelector('[data-mano="' + p.uid + '"]') : null;
+        let destino: [number, number] = [0, -0.85];
+        if (chip) {
+          const rc = (chip as HTMLElement).getBoundingClientRect();
+          destino = [(rc.left + rc.width / 2) / window.innerWidth * 2 - 1, 1 - (rc.top + rc.height / 2) / window.innerHeight * 2];
+        }
+        for (let i = 0; i < n; i++) cartas.push({ hex: r + ',' + c, recurso: h.tipo, destino });
+      }
+    }
+    setEvento3d({ id: Date.now(), dados: juego.dados, cartas });
+  }, [juego?.dados, juego?.tirada, juego?.fase, geo, partida?.modo ?? 'p', partida?.semilla ?? 0]);
+
   const bots = useMemo(
     () => Object.keys(sala.jugadores ?? {}).filter((id) => esBotJugador(sala.jugadores, id)),
     [sala.jugadores],
@@ -141,7 +180,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [error, setError] = useState('');
   const [panel, setPanel] = useState<Panel>('ninguno');
   const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
-  const [pendiente, setPendiente] = useState<{ tipo: 'poblado'; id: string } | null>(null);
+  const [pendiente, setPendiente] = useState<{ tipo: 'poblado' | 'camino'; id: string } | null>(null);
   const [cambio, setCambio] = useState(false);
   const [pestana, setPestana] = useState<Pestana>('jugadores');
   const [ofDa, setOfDa] = useState<Recursos>(manoVacia());
@@ -158,22 +197,68 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const faseActual = juego?.fase;
   const tiradaVista = useRef(tirada);
   const disparado = useRef(-1);
+  const control3dRef = useRef<Control3D | null>(null);
+  const manoReal = useMemo(() => ({ ...manoVacia(), ...(sala.manos?.[uid] ?? {}) }), [sala.manos, uid]);
+  const [manoMostrada, setManoMostrada] = useState<Recursos>(manoReal);
+  const animandoRoll = useRef(false);
 
   useEffect(() => {
     if (tirada === tiradaVista.current) return;
     tiradaVista.current = tirada;
     sonido.dados();
     setRodando(true);
+    animandoRoll.current = true;
     const intervalo = window.setInterval(() => setAzar([dado6(), dado6()]), 90);
-    const fin = window.setTimeout(() => {
+    const dadosFinVal = juego?.dados ?? [1, 1];
+    control3dRef.current?.dados(dadosFinVal, () => {});
+
+    const finRoll = window.setTimeout(() => {
       window.clearInterval(intervalo);
       setRodando(false);
+
+      const finPausa = window.setTimeout(() => {
+        const suma = dadosFinVal[0] + dadosFinVal[1];
+        if (suma !== 7 && juego && geo && partida) {
+          const mapa = mapaDe(partida.modo, partida.semilla);
+          const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
+          const vuelos: CartaVuelo[] = [];
+          for (const sm of sumas) {
+            for (const h of mapa.hexes) {
+              if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') continue;
+              const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
+              for (const [vid] of vertices) {
+                const pieza = juego.poblados[vid];
+                if (!pieza) continue;
+                const n = pieza.tipo === 'ciudad' ? 2 : 1;
+                for (let i = 0; i < n; i++) {
+                  vuelos.push({ hex: h.r + ',' + h.c, recurso: h.tipo, destino: [0, -0.85] });
+                }
+              }
+            }
+          }
+          if (vuelos.length > 0) {
+            control3dRef.current?.produccion(vuelos);
+          }
+        }
+
+        setManoMostrada(manoReal);
+        animandoRoll.current = false;
+      }, 500);
+
+      return () => window.clearTimeout(finPausa);
     }, 1100);
+
     return () => {
       window.clearInterval(intervalo);
-      window.clearTimeout(fin);
+      window.clearTimeout(finRoll);
     };
-  }, [tirada]);
+  }, [tirada, juego, geo, partida, manoReal]);
+
+  useEffect(() => {
+    if (!animandoRoll.current) {
+      setManoMostrada(manoReal);
+    }
+  }, [manoReal]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
@@ -372,8 +457,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const colorJ = (id: string) => colorDe(sala.jugadores?.[id]?.color ?? '');
   const miColor = colorJ(uid);
   const textoMio = esClaro(miColor) ? '#1b1b1b' : '#ffffff';
-  const mano = { ...manoVacia(), ...(sala.manos?.[uid] ?? {}) };
-  const valores: [number, number] = rodando ? azar : (juego.dados ?? [1, 1]);
+  const mano = manoMostrada;  const valores: [number, number] = rodando ? azar : (juego.dados ?? [1, 1]);
   const suma = juego.dados ? juego.dados[0] + juego.dados[1] : 0;
   const enOrden = juego.fase === 'orden';
   const enColocacion = juego.fase === 'colocacion';
@@ -453,11 +537,21 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const confirmarPendiente = () => {
     if (!pendiente) return;
     const id = pendiente.id;
+    const tipo = pendiente.tipo;
     setPendiente(null);
-    if (miTurnoColocar) void poner(id);
-    else {
-      setConstruyendo(null);
-      void intentar(() => construirPieza(codigo, uid, numTurno, 'poblado', id), 'No pude construir, intenta otra vez');
+    if (tipo === 'poblado') {
+      if (miTurnoColocar) void poner(id);
+      else {
+        setConstruyendo(null);
+        void intentar(() => construirPieza(codigo, uid, numTurno, 'poblado', id), 'No pude construir, intenta otra vez');
+      }
+    } else if (tipo === 'camino') {
+      if (miTurnoColocar) void camino(id);
+      else {
+        setConstruyendo(null);
+        const t = construyendo ?? (gratis ? 'camino' : null);
+        if (t) void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
+      }
     }
   };
   const [br, bc] = juego.ladron.split(',').map(Number);
@@ -493,7 +587,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
         return (
-          <g key={e} onClick={() => (miTurnoColocar ? void camino(e) : construirAqui(e))} style={{ cursor: 'pointer' }}>
+          <g key={e} onClick={() => setPendiente({ tipo: 'camino', id: e })} style={{ cursor: 'pointer' }}>
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="transparent" strokeWidth={24} strokeLinecap="round" />
             <line className="hot-arista" x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} />
           </g>
@@ -514,11 +608,22 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           <circle className="hot" cx={geo.vertices[v].x} cy={geo.vertices[v].y} r={10} />
         </g>
       ))}
-      {pendiente && geo.vertices[pendiente.id] && (
+      {pendiente && pendiente.tipo === 'poblado' && geo.vertices[pendiente.id] && (
         <g transform={`translate(${geo.vertices[pendiente.id].x} ${geo.vertices[pendiente.id].y}) scale(0.95)`} opacity={0.5} pointerEvents="none">
           <FormaPoblado color={miColor} />
         </g>
       )}
+      {pendiente && pendiente.tipo === 'camino' && geo.aristas[pendiente.id] && (() => {
+        const a = geo.aristas[pendiente.id];
+        const va = geo.vertices[a.a];
+        const vb = geo.vertices[a.b];
+        return (
+          <g pointerEvents="none" opacity={0.6}>
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={miColor} strokeWidth={7} strokeLinecap="round" />
+          </g>
+        );
+      })()}
     </g>
   );
 
@@ -578,10 +683,13 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               flotante
               mesa
               piezas={piezas3d}
+              dados={juego?.dados ?? null}
+              evento3d={evento3d}
+              controlRef={control3dRef}
             />
             {pendiente && (
               <div className="barra-confirmar">
-                <span>¿Poner el poblado aquí?</span>
+                <span>{pendiente.tipo === 'poblado' ? '¿Poner el poblado aquí?' : '¿Poner el camino aquí?'}</span>
                 <button className="vx" onClick={() => setPendiente(null)}>✕</button>
                 <button className="vv" onClick={confirmarPendiente}>✔</button>
               </div>
@@ -635,7 +743,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
             {listaJugadores.map((id, i) => {
               const e = juego.stats[id] ?? { cartas: 0, desarrollo: 0, caballeros: 0, puntos: 0 };
               return (
-                <div key={id} className={id === actualUid ? 'jug actual' : 'jug'}>
+                <div key={id} className={id === actualUid ? 'jug actual' : 'jug'} data-mano={id}>
                   <div className="jug-nombre">
                     <span className="punto" style={{ background: colorJ(id) }} />
                     <span>
@@ -992,11 +1100,11 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
             {error && <div className="error-mini">{error}</div>}
           </div>
         </div>
-        <div className="recursos">
+        <div className="recursos" data-mano={uid}>
           {RECURSOS.map((r) => (
             <div key={r} className="rec" title={NOMBRE_RECURSO[r]}>
               <IconoRecurso tipo={r} />
-              <b>{mano[r]}</b>
+              <b>{manoMostrada[r]}</b>
             </div>
           ))}
         </div>

@@ -9,10 +9,13 @@ import type { Material, Mesh, Object3D } from 'three';
 import { geometriaDe } from '../tablero';
 import type { Mapa } from '../tablero';
 import type { Three } from './cargar';
+import { crearDados } from './dados3d';
 import { crearOrbita } from './camara';
 import { crearPiezas } from './piezas3d';
 import type { PiezasVista } from './piezas3d';
 import { crearTablero, proyectoMapa } from './tablero3d';
+import { crearVueloCartas } from './vuelo3d';
+import type { CartaVuelo } from './vuelo3d';
 
 export type Control3D = {
   acercar: (factor: number) => void;
@@ -21,6 +24,10 @@ export type Control3D = {
   reiniciar: () => void;
   /** Actualiza caminos, poblados, ciudades y ladrón. */
   piezas: (piezas: PiezasVista | null) => void;
+  /** Lanza los dados 3D con un resultado [a, b]. */
+  dados: (dados: [number, number] | null, onFin?: () => void, conAnimacion?: boolean) => void;
+  /** Lanza animación de cartas volando desde los hexágonos productores. */
+  produccion: (cartas: CartaVuelo[]) => void;
   destruir: () => void;
 };
 
@@ -46,14 +53,24 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
   const tablero = crearTablero(T, mapa);
   escena.add(tablero.grupo);
 
+  const aMundoFn = proyectoMapa(mapa);
+
   // Piezas de los jugadores: reciben su estado desde React y se animan aquí.
-  const piezas3d = crearPiezas(T, mapa, geometriaDe(mapa.modo, mapa.semilla), proyectoMapa(mapa));
+  const piezas3d = crearPiezas(T, mapa, geometriaDe(mapa.modo, mapa.semilla), aMundoFn);
   escena.add(piezas3d.grupo);
+
+  // Dados 3D
+  const dados3d = crearDados(T);
+  escena.add(dados3d.grupo);
+
+  // Cartas volando por producción
+  const vuelo3d = crearVueloCartas(T, mapa);
+  escena.add(vuelo3d.grupo);
 
   // Herramienta de depuración (solo en desarrollo): deja la escena accesible
   // para poder proyectar puntos del mundo a píxeles y comprobar el render.
   if (import.meta.env.DEV) {
-    (window as Window & { __islote3d?: unknown }).__islote3d = { T, escena, camara, renderer, tablero, piezas: piezas3d };
+    (window as Window & { __islote3d?: unknown }).__islote3d = { T, escena, camara, renderer, tablero, piezas: piezas3d, dados: dados3d, vuelo: vuelo3d };
   }
 
   // --- Luces ---
@@ -97,8 +114,10 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
     ultimo = t;
     const animandoCamara = orbita.paso(dt);
     const animandoPiezas = piezas3d.animar(dt);
+    const animandoDados = dados3d.animar(dt);
+    const animandoVuelo = vuelo3d.animar(dt);
     renderer.render(escena, camara);
-    if (animandoCamara || animandoPiezas) pedir();
+    if (animandoCamara || animandoPiezas || animandoDados || animandoVuelo) pedir();
   };
 
   const orbita = crearOrbita(T, camara, caja, pedir);
@@ -161,6 +180,17 @@ export function montarEscena(caja: HTMLElement, T: Three, mapa: Mapa): Control3D
     reiniciar: () => orbita.reiniciar(),
     piezas: (estado) => {
       if (piezas3d.actualizar(estado)) pedir();
+    },
+    dados: (dadosValores, onFin, conAnimacion) => {
+      dados3d.lanzar(dadosValores, () => {
+        pedir();
+        onFin?.();
+      }, conAnimacion);
+      pedir();
+    },
+    produccion: (cartas) => {
+      vuelo3d.lanzar(cartas, aMundoFn, camara);
+      pedir();
     },
     destruir,
   };

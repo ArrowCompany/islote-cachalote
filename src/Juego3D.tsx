@@ -11,6 +11,7 @@ import { cargarThree } from './vista3d/cargar';
 import { montarEscena } from './vista3d/escena';
 import type { Control3D } from './vista3d/escena';
 import type { PiezasVista } from './vista3d/piezas3d';
+import type { CartaVuelo } from './vista3d/vuelo3d';
 import './vista3d.css';
 
 type Props = {
@@ -18,17 +19,24 @@ type Props = {
   semilla: number;
   /** Caminos, poblados, ciudades y ladrón del estado actual (si hay partida). */
   piezas?: PiezasVista | null;
+  /** Último resultado de dados (para mostrarlos al montar la vista). */
+  dados?: [number, number] | null;
+  /** Evento de tirada: dispara la animación de dados y luego el vuelo de cartas. */
+  evento3d?: { id: number; dados: [number, number]; cartas: CartaVuelo[] } | null;
   /** Entrega el control de la cámara al padre (para los botones de zoom). */
   onListo?: (control: Control3D | null) => void;
   /** Se llama si no se pudo cargar Three.js o no hay WebGL. */
   onFallo?: (error: unknown) => void;
 };
 
-export default function Juego3D({ modo, semilla, piezas, onListo, onFallo }: Props) {
+export default function Juego3D({ modo, semilla, piezas, dados, evento3d, onListo, onFallo }: Props) {
   const caja = useRef<HTMLDivElement | null>(null);
   const control = useRef<Control3D | null>(null);
   const avisos = useRef({ onListo, onFallo });
   const piezasRef = useRef<PiezasVista | null>(piezas ?? null);
+  const dadosRef = useRef<[number, number] | null>(dados ?? null);
+  const eventoRef = useRef(evento3d ?? null);
+  const idRef = useRef(evento3d?.id ?? 0);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const [detalle, setDetalle] = useState('');
   const [intento, setIntento] = useState(0);
@@ -38,6 +46,8 @@ export default function Juego3D({ modo, semilla, piezas, onListo, onFallo }: Pro
     avisos.current = { onListo, onFallo };
   });
   piezasRef.current = piezas ?? null;
+  dadosRef.current = dados ?? null;
+  eventoRef.current = evento3d ?? null;
 
   useEffect(() => {
     let vivo = true;
@@ -55,6 +65,7 @@ export default function Juego3D({ modo, semilla, piezas, onListo, onFallo }: Pro
           return;
         }
         escena.piezas(piezasRef.current);
+        if (dadosRef.current) escena.dados(dadosRef.current, undefined, false);
         control.current = escena;
         avisos.current.onListo?.(escena);
         setEstado('listo');
@@ -79,6 +90,16 @@ export default function Juego3D({ modo, semilla, piezas, onListo, onFallo }: Pro
   useEffect(() => {
     if (estado === 'listo') control.current?.piezas(piezas ?? null);
   }, [piezas, estado]);
+
+  // Evento de tirada: primero ruedan los dados, al terminar vuelan las cartas.
+  useEffect(() => {
+    if (estado !== 'listo' || !evento3d) return;
+    if (evento3d.id === idRef.current) return;
+    idRef.current = evento3d.id;
+    control.current?.dados(evento3d.dados, () => {
+      if (evento3d.cartas.length) control.current?.produccion(evento3d.cartas);
+    }, true);
+  }, [evento3d, estado]);
 
   return (
     <div className="vista3d" ref={caja}>
