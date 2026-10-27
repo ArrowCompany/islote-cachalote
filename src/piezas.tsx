@@ -88,22 +88,32 @@ export function listones(x1: number, y1: number, x2: number, y2: number, k: numb
 }
 
 export function FormaPoblado({ color }: { color: string }) {
+  const borde = oscurecer(color, 0.5);
   return (
-    <g filter="url(#sombraPieza)">
-      <rect x={-9} y={-3} width={18} height={11} fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
-      <path d="M-11 -3L0 -12L11 -3Z" fill={oscurecer(color, 0.62)} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
+    <g>
+      <polygon points="18,8 26,5 38,19 30,22" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="18,8 26,5 38,19 30,22" fill="#fff" fillOpacity={0.25} stroke="none" />
+      <polygon points="30,22 38,19 38,36 30,40" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="30,22 38,19 38,36 30,40" fill="#000" fillOpacity={0.3} stroke="none" />
+      <polygon points="6,40 6,22 18,8 30,22 30,40" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
     </g>
   );
 }
 
 export function FormaCiudad({ color }: { color: string }) {
-  const techo = oscurecer(color, 0.62);
+  const borde = oscurecer(color, 0.5);
   return (
-    <g filter="url(#sombraPieza)">
-      <rect x={-16} y={-14} width={12} height={22} fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
-      <path d="M-18.5 -14L-10 -25L-1.5 -14Z" fill={techo} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
-      <rect x={-4} y={-4} width={19} height={14} fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
-      <path d="M-6 -14L17 -8L17 -4L-6 -4Z" fill={techo} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
+    <g>
+      <polygon points="26,34 32,28 66,28 60,34" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="26,34 32,28 66,28 60,34" fill="#fff" fillOpacity={0.25} stroke="none" />
+      <polygon points="60,34 66,28 66,48 60,52" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="60,34 66,28 66,48 60,52" fill="#000" fillOpacity={0.3} stroke="none" />
+      <polygon points="26,52 26,34 60,34 60,52" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="16,6 24,3 34,16 26,22" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="16,6 24,3 34,16 26,22" fill="#fff" fillOpacity={0.25} stroke="none" />
+      <polygon points="26,22 34,16 34,48 26,52" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="26,22 34,16 34,48 26,52" fill="#000" fillOpacity={0.3} stroke="none" />
+      <polygon points="4,52 4,22 16,6 26,22 26,52" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
     </g>
   );
 }

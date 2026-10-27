@@ -14,7 +14,7 @@ import type { Control3D } from './vista3d/escena';
 import * as sonido from './sonido';
 import type { ModoSonido } from './sonido';
 import Mesa from './Mesa';
-import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones } from './piezas';
+import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones, oscurecer } from './piezas';
 import './partida.css';
 
 type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void };
@@ -567,12 +567,16 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         if (!a) return null;
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
+        const cx = (va.x + vb.x) / 2;
+        const cy = (va.y + vb.y) / 2;
+        const dx = vb.x - va.x;
+        const dy = vb.y - va.y;
+        const len = Math.hypot(dx, dy);
+        const ang = Math.atan2(dy, dx) * 180 / Math.PI;
         return (
-          <g key={e} pointerEvents="none" filter="url(#sombraPieza)">
-            <line x1={va.x} y1={va.y + 1.5} x2={vb.x} y2={vb.y + 1.5} stroke="#000000" strokeWidth={13} strokeLinecap="round" opacity={0.4} />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={7} strokeLinecap="round" />
-            <path d={listones(va.x, va.y, vb.x, vb.y, 1)} stroke="rgba(255,255,255,0.35)" strokeWidth={1.4} fill="none" />
+          <g key={e} pointerEvents="none">
+            <rect x={-len/2} y={-5} width={len} height={10} rx={2} fill={colorJ(dueno)} stroke={oscurecer(colorJ(dueno), 0.5)} strokeWidth={1} transform={`translate(${cx} ${cy}) rotate(${ang})`} />
+            <rect x={-len/2} y={-5} width={len} height={3} rx={2} fill="#fff" fillOpacity={0.25} transform={`translate(${cx} ${cy}) rotate(${ang})`} />
           </g>
         );
       })}
