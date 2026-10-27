@@ -88,10 +88,14 @@ export function listones(x1: number, y1: number, x2: number, y2: number, k: numb
 }
 
 export function FormaPoblado({ color }: { color: string }) {
+  const osc = oscurecer(color, 0.62);
+  const cla = oscurecer(color, 1.18);
   return (
     <g filter="url(#sombraPieza)">
-      <rect x={-9} y={-3} width={18} height={12} fill={color} stroke="#000" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M-12.5 -3L0 -15.5L12.5 -3Z" fill={oscurecer(color, 0.62)} stroke="#000" strokeWidth={1.8} strokeLinejoin="round" />
+      <rect x={-9} y={-3} width={18} height={12} fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-9 -3L-9 -5" stroke={cla} strokeWidth={1.6} strokeLinecap="round" />
+      <path d="M-12.5 -3L0 -15.5L12.5 -3Z" fill={osc} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-11 -4L0 -14L11 -4" stroke={cla} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.6} />
       <rect x={-2.6} y={3} width={5.2} height={6} fill="#1b1b1b" stroke="none" opacity={0.6} />
     </g>
   );
@@ -99,12 +103,15 @@ export function FormaPoblado({ color }: { color: string }) {
 
 export function FormaCiudad({ color }: { color: string }) {
   const techo = oscurecer(color, 0.62);
+  const cla = oscurecer(color, 1.18);
   return (
     <g filter="url(#sombraPieza)">
-      <rect x={-4} y={-4} width={19} height={14} fill={color} stroke="#000" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M-6 -4L5.5 -14L17 -4Z" fill={techo} stroke="#000" strokeWidth={1.8} strokeLinejoin="round" />
-      <rect x={-16} y={-12} width={12} height={22} fill={color} stroke="#000" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M-18.5 -12L-10 -23L-1.5 -12Z" fill={techo} stroke="#000" strokeWidth={1.8} strokeLinejoin="round" />
+      <rect x={-16} y={-12} width={12} height={22} fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-18.5 -12L-10 -23L-1.5 -12Z" fill={techo} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-17 -13L-10 -21.5L-3 -13" stroke={cla} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.6} />
+      <rect x={-4} y={-4} width={19} height={14} fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-6 -4L5.5 -14L17 -4Z" fill={techo} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-4.5 -5L5.5 -12.5L15.5 -5" stroke={cla} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.6} />
       <rect x={7} y={3} width={4.4} height={7} fill="#1b1b1b" stroke="none" opacity={0.6} />
       <rect x={-12} y={-6} width={4} height={5} fill="#fff7e0" stroke="none" opacity={0.85} />
     </g>
