@@ -121,11 +121,18 @@ function crearCartaDOM(recurso: string): HTMLDivElement {
   return carta;
 }
 
-async function volarCarta({ recurso, origen, destino, conSubida = true }: { recurso: string; origen: HTMLElement | null; destino: HTMLElement | null; conSubida?: boolean }) {
+async function volarCarta({ recurso, origen, destino, conSubida = true, prod }: { recurso: string; origen: HTMLElement | null; destino: HTMLElement | null; conSubida?: boolean; prod?: any }) {
   const capa = document.getElementById('capa-cartas');
-  if (!capa || !origen || !destino) return;
+  const destEl = destino || (prod ? document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null : null) || document.body;
+
+  console.log('ORIGEN/DESTINO', origen, destEl, origen?.getBoundingClientRect(), destEl?.getBoundingClientRect());
+
+  if (!capa || !origen || !destEl) {
+    console.warn('volarCarta cancelada', { capa, origen, destino: destEl, prod });
+    return;
+  }
   const o = origen.getBoundingClientRect();
-  const d = destino.getBoundingClientRect();
+  const d = destEl.getBoundingClientRect();
   const x0 = o.left + o.width / 2;
   const y0 = o.top + o.height / 2;
   const x1 = d.left + d.width / 2;
@@ -162,6 +169,7 @@ async function volarCarta({ recurso, origen, destino, conSubida = true }: { recu
   await anim2.finished;
 
   carta.remove();
+  console.log('CARTA LLEGO', recurso);
 }
 
 async function pulsoHexagonos(hexIds: string[]) {
@@ -333,6 +341,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         });
       });
 
+      console.log('PRODUCCION', producciones);
+
       if (producciones.length === 0) {
         setManoMostrada(manoReal);
         setBloqueadoAnim(false);
@@ -350,7 +360,15 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const destEl = (prod.uid === uid)
           ? document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null
           : document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null;
-        await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true });
+        await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true, prod });
+
+        if (prod.uid === uid) {
+          setManoMostrada((prev) => ({
+            ...prev,
+            [prod.recurso as Recurso]: ((prev as any)[prod.recurso] ?? 0) + 1,
+          }));
+        }
+
         // Al llegar: suma +1 con pop
         setPopRecurso(prod.recurso);
         window.setTimeout(() => setPopRecurso(null), 400);
@@ -1225,7 +1243,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         </div>
         <div className="recursos" data-mano={uid}>
           {RECURSOS.map((r) => (
-            <div key={r} className="rec" title={NOMBRE_RECURSO[r]}>
+            <div key={r} className="rec" title={NOMBRE_RECURSO[r]} data-jugador={uid} data-recurso={r}>
               <IconoRecurso tipo={r} />
               <b className={popRecurso === r ? 'pop-num' : ''}>{manoMostrada[r]}</b>
             </div>
