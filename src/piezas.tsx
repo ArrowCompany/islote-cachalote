@@ -88,25 +88,49 @@ export function listones(x1: number, y1: number, x2: number, y2: number, k: numb
 }
 
 export function FormaPoblado({ color }: { color: string }) {
+  const osc = oscurecer(color, 0.55);
+  const cla = oscurecer(color, 1.15);
   return (
-    <g stroke="#000000" strokeWidth={2.8} strokeLinejoin="round">
-      <rect x={-9} y={-3} width={18} height={12} fill={color} />
-      <path d="M-12.5 -3L0 -15.5L12.5 -3Z" fill={oscurecer(color, 0.62)} />
-      <rect x={-2.6} y={3} width={5.2} height={6} fill="#1b1b1b" stroke="none" opacity={0.6} />
+    <g filter="url(#sombraPieza)">
+      {/* Sombra de contacto */}
+      <ellipse cx={0} cy={9} rx={11} ry={3} fill="#000" opacity={0.35} />
+      {/* Pared lateral (profundidad) */}
+      <rect x={-9} y={-3} width={18} height={12} fill={osc} />
+      {/* Pared frontal (más clara) */}
+      <rect x={-9} y={-5} width={18} height={12} fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      {/* Tejado con volumen */}
+      <path d="M-13 -5L0 -18L13 -5Z" fill={osc} />
+      <path d="M-13 -7L0 -20L13 -7Z" fill={cla} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      {/* Puerta */}
+      <rect x={-2.6} y={1} width={5.2} height={6} fill="#1b1b1b" stroke="none" opacity={0.7} />
+      {/* Ventana */}
+      <rect x={-7} y={-1} width={3.5} height={3.5} fill="#fff7e0" stroke="none" opacity={0.9} />
     </g>
   );
 }
 
 export function FormaCiudad({ color }: { color: string }) {
-  const techo = oscurecer(color, 0.62);
+  const osc = oscurecer(color, 0.5);
+  const cla = oscurecer(color, 1.15);
   return (
-    <g stroke="#000000" strokeWidth={2.8} strokeLinejoin="round">
-      <rect x={-4} y={-4} width={19} height={14} fill={color} />
-      <path d="M-6 -4L5.5 -14L17 -4Z" fill={techo} />
-      <rect x={-16} y={-12} width={12} height={22} fill={color} />
-      <path d="M-18.5 -12L-10 -23L-1.5 -12Z" fill={techo} />
-      <rect x={7} y={3} width={4.4} height={7} fill="#1b1b1b" stroke="none" opacity={0.6} />
-      <rect x={-12} y={-6} width={4} height={5} fill="#fff7e0" stroke="none" opacity={0.85} />
+    <g filter="url(#sombraPieza)">
+      {/* Sombra de contacto */}
+      <ellipse cx={-2} cy={12} rx={18} ry={4} fill="#000" opacity={0.35} />
+      {/* Torre baja (lateral) */}
+      <rect x={-16} y={-12} width={12} height={22} fill={osc} />
+      <rect x={-16} y={-14} width={12} height={22} fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-18.5 -14L-10 -25L-1.5 -14Z" fill={cla} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      {/* Torre principal */}
+      <rect x={-4} y={-4} width={19} height={14} fill={osc} />
+      <rect x={-4} y={-6} width={19} height={14} fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      <path d="M-6 -6L5.5 -16L17 -6Z" fill={cla} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" />
+      {/* Puerta principal */}
+      <rect x={7} y={1} width={4.4} height={7} fill="#1b1b1b" stroke="none" opacity={0.7} />
+      {/* Ventana */}
+      <rect x={-12} y={-9} width={4} height={5} fill="#fff7e0" stroke="none" opacity={0.9} />
+      {/* Bandera */}
+      <line x1={5.5} y1={-16} x2={5.5} y2={-26} stroke="#3b2a14" strokeWidth={1.6} />
+      <path d="M5.5 -26L13 -23L5.5 -20Z" fill="#d62828" stroke="none" />
     </g>
   );
 }

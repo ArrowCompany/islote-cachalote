@@ -568,10 +568,11 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
         return (
-          <g key={e} pointerEvents="none">
+          <g key={e} pointerEvents="none" filter="url(#sombraPieza)">
+            <line x1={va.x} y1={va.y + 1.5} x2={vb.x} y2={vb.y + 1.5} stroke="#000000" strokeWidth={13} strokeLinecap="round" opacity={0.4} />
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
             <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={7} strokeLinecap="round" />
-            <path d={listones(va.x, va.y, vb.x, vb.y, 1)} stroke="rgba(0,0,0,0.45)" strokeWidth={1.4} fill="none" />
+            <path d={listones(va.x, va.y, vb.x, vb.y, 1)} stroke="rgba(255,255,255,0.35)" strokeWidth={1.4} fill="none" />
           </g>
         );
       })}

@@ -340,7 +340,7 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
   const mapa = mapaDe(modo, semilla);
   const txt = 'font-family:system-ui,sans-serif;font-weight:600;text-anchor:middle;';
 
-  let o = '<defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11567a"/><stop offset="1" stop-color="#06202e"/></linearGradient></defs>';
+  let o = '<defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11567a"/><stop offset="1" stop-color="#06202e"/></linearGradient><filter id="sombraPieza" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6"/><feOffset dx="1.2" dy="1.8" result="off"/><feFlood flood-color="#000" flood-opacity="0.45"/><feComposite in2="off" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
   o += '<rect width="860" height="670" rx="18" fill="url(#bg)"/>';
 
   const wr = mk(5);
