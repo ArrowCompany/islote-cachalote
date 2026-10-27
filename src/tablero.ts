@@ -340,7 +340,7 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
   const mapa = mapaDe(modo, semilla);
   const txt = 'font-family:system-ui,sans-serif;font-weight:600;text-anchor:middle;';
 
-  let o = '<defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11567a"/><stop offset="1" stop-color="#06202e"/></linearGradient><filter id="sombraPieza" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/><feOffset dx="2" dy="3" result="off"/><feFlood flood-color="#000" flood-opacity="0.5"/><feComposite in2="off" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  let o = '<defs><linearGradient id="sh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11567a"/><stop offset="1" stop-color="#06202e"/></linearGradient><filter id="sombraPieza" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/><feOffset dx="2.5" dy="3.5" result="off"/><feFlood flood-color="#000" flood-opacity="0.6"/><feComposite in2="off" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
   o += '<rect width="860" height="670" rx="18" fill="url(#bg)"/>';
 
   const wr = mk(5);
