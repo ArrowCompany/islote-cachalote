@@ -20,7 +20,8 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
   const [semillaLibre, setSemillaLibre] = useState(11);
   const [vista, setVista] = useState(INICIO);
   // Vista 3D: ocultada temporalmente para centrarse en el 2D.
-  const TRES_D_HABILITADO = false;
+  // Para reactivarla, cambia a: const [vista3d, setVista3d] = useState(true);
+  // y restaura el boton: {TRES_D_HABILITADO && <button ...>3D</button>}
   const [vista3d, setVista3d] = useState(false);
   const control3d = useRef<Control3D | null>(null);
   const modo: Modo = modoFijo ?? modoLibre;
@@ -47,7 +48,6 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
     else setVista(INICIO);
   };
 
-  const alternarVista = () => setVista3d((v) => !v);
 
   const verMesa = () => {
     const visor = visorRef.current, sv = svgRef.current;
@@ -98,9 +98,6 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
     <div className="juego">
       {flotante && (
         <div className="zoom-flotante">
-          <button className="vista" onClick={alternarVista} title={vista3d ? 'Volver al tablero 2D' : 'Ver el tablero en 3D'}>
-            {vista3d ? '2D' : '3D'}
-          </button>
           <button onClick={() => zoom(1.25)}>+</button>
           <button onClick={() => zoom(0.8)}>−</button>
           <button onClick={centrar}>⟲</button>
@@ -116,7 +113,7 @@ export default function Juego({ modo: modoFijo, semilla: semillaFija, overlay, f
             <button className={forma === 'catan' ? 'on' : ''} onClick={() => setForma('catan')}>🏝️ Tipo Catan</button>
           </>
         )}
-        {TRES_D_HABILITADO && <button className={vista3d ? 'on' : ''} onClick={alternarVista}>{vista3d ? '🗺️ 2D' : '🧊 3D'}</button>}
+
         <button className="on" onClick={() => zoom(1.25)}>+</button>
         <button className="on" onClick={() => zoom(0.8)}>−</button>
         <button className="on" onClick={centrar}>Centrar</button>
