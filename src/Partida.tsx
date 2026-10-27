@@ -181,6 +181,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [panel, setPanel] = useState<Panel>('ninguno');
   const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
   const [pendiente, setPendiente] = useState<{ tipo: 'poblado' | 'camino'; id: string } | null>(null);
+  const [cartasVolando2D, setCartasVolando2D] = useState<{ id: number; hex: string; recurso: string }[]>([]);
   const [cambio, setCambio] = useState(false);
   const [pestana, setPestana] = useState<Pestana>('jugadores');
   const [ofDa, setOfDa] = useState<Recursos>(manoVacia());
@@ -238,6 +239,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           }
           if (vuelos.length > 0) {
             control3dRef.current?.produccion(vuelos);
+            setCartasVolando2D(vuelos.map((v, i) => ({ id: Date.now() + i, hex: v.hex, recurso: v.recurso })));
+            window.setTimeout(() => setCartasVolando2D([]), 1200);
           }
         }
 
@@ -624,6 +627,21 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </g>
         );
       })()}
+      {cartasVolando2D.map((cv) => {
+        const [r, c] = cv.hex.split(',').map(Number);
+        const [hx, hy] = posicion(partida.modo, r, c);
+        const color = COLOR[cv.recurso as keyof typeof COLOR] ?? '#888888';
+        return (
+          <g key={cv.id} pointerEvents="none">
+            <g transform={`translate(${hx} ${hy})`}>
+              <rect x={-14} y={-20} width={28} height={40} rx={4} fill={color} stroke="#fff" strokeWidth={2} opacity={1}>
+                <animate attributeName="opacity" from="1" to="0" dur="0.9s" fill="freeze" />
+              </rect>
+              <animateTransform attributeName="transform" type="translate" from="0 0" to="0 120" dur="0.9s" fill="freeze" additive="sum" />
+            </g>
+          </g>
+        );
+      })}
     </g>
   );
 
