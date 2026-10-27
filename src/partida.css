@@ -220,3 +220,6 @@
 .chat-form{display:flex;gap:6px;}
 .chat-form input{flex:1;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:#0b2f44;color:#f3e6c4;}
 .chat-form button{padding:6px 12px;border-radius:8px;border:none;background:#2e9e44;color:#fff;cursor:pointer;}
+
+@keyframes popNum { 0% { transform: scale(1); } 50% { transform: scale(1.6); color: #fff; } 100% { transform: scale(1); } }
+.pop-num { animation: popNum 0.4s ease-out; display: inline-block; }

@@ -181,7 +181,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [panel, setPanel] = useState<Panel>('ninguno');
   const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
   const [pendiente, setPendiente] = useState<{ tipo: 'poblado' | 'camino'; id: string } | null>(null);
-  const [cartasVolando2D, setCartasVolando2D] = useState<{ id: number; hex: string; recurso: string }[]>([]);
+  const [cartasVolando2D, setCartasVolando2D] = useState<{ id: number; hex: string; recurso: string; uid: string }[]>([]);
+  const [hexesRipple, setHexesRipple] = useState<string[]>([]);
+  const [bloqueadoAnim, setBloqueadoAnim] = useState(false);
+  const [popRecurso, setPopRecurso] = useState<string | null>(null);
   const [cambio, setCambio] = useState(false);
   const [pestana, setPestana] = useState<Pestana>('jugadores');
   const [ofDa, setOfDa] = useState<Recursos>(manoVacia());
@@ -209,51 +212,83 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     sonido.dados();
     setRodando(true);
     animandoRoll.current = true;
+    setBloqueadoAnim(true);
     const intervalo = window.setInterval(() => setAzar([dado6(), dado6()]), 90);
     const dadosFinVal = juego?.dados ?? [1, 1];
     control3dRef.current?.dados(dadosFinVal, () => {});
 
-    const finRoll = window.setTimeout(() => {
+    const run = async () => {
+      // 1. Dados ruedan (2s)
+      await new Promise((r) => window.setTimeout(r, 2000));
       window.clearInterval(intervalo);
       setRodando(false);
 
-      const finPausa = window.setTimeout(() => {
-        const suma = dadosFinVal[0] + dadosFinVal[1];
-        if (suma !== 7 && juego && geo && partida) {
-          const mapa = mapaDe(partida.modo, partida.semilla);
-          const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
-          const vuelos: CartaVuelo[] = [];
-          for (const sm of sumas) {
-            for (const h of mapa.hexes) {
-              if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') continue;
-              const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
-              for (const [vid] of vertices) {
-                const pieza = juego.poblados[vid];
-                if (!pieza) continue;
-                const n = pieza.tipo === 'ciudad' ? 2 : 1;
-                for (let i = 0; i < n; i++) {
-                  vuelos.push({ hex: h.r + ',' + h.c, recurso: h.tipo, destino: [0, -0.85] });
-                }
-              }
-            }
-          }
-          if (vuelos.length > 0) {
-            control3dRef.current?.produccion(vuelos);
-            setCartasVolando2D(vuelos.map((v, i) => ({ id: Date.now() + i, hex: v.hex, recurso: v.recurso })));
-            window.setTimeout(() => setCartasVolando2D([]), 2500);
-          }
-        }
-
+      const suma = dadosFinVal[0] + dadosFinVal[1];
+      if (suma === 7 || !juego || !geo || !partida) {
         setManoMostrada(manoReal);
+        setBloqueadoAnim(false);
         animandoRoll.current = false;
-      }, 800);
+        return;
+      }
 
-      return () => window.clearTimeout(finPausa);
-    }, 2000);
+      const mapa = mapaDe(partida.modo, partida.semilla);
+      const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
+
+      // 2. Calcular producción (sin aplicar)
+      const producciones: { hex: string; recurso: string; uid: string }[] = [];
+      const hexesProductores = new Set<string>();
+      sumas.forEach((sm) => {
+        mapa.hexes.forEach((h) => {
+          if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') return;
+          const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
+          vertices.forEach(([vid]) => {
+            const pieza = juego.poblados[vid];
+            if (!pieza) return;
+            const n = pieza.tipo === 'ciudad' ? 2 : 1;
+            for (let i = 0; i < n; i++) {
+              producciones.push({ hex: h.r + ',' + h.c, recurso: h.tipo, uid: pieza.uid });
+              hexesProductores.add(h.r + ',' + h.c);
+            }
+          });
+        });
+      });
+
+      if (producciones.length === 0) {
+        setManoMostrada(manoReal);
+        setBloqueadoAnim(false);
+        animandoRoll.current = false;
+        return;
+      }
+
+      const vuelos: CartaVuelo[] = producciones.map((p) => ({ hex: p.hex, recurso: p.recurso, destino: [0, -0.85] }));
+
+      // 3. Pulso en hexágonos (ripple) ~600ms
+      setHexesRipple(Array.from(hexesProductores));
+      await new Promise((r) => window.setTimeout(r, 600));
+      setHexesRipple([]);
+
+      // 4. Carta sale del hexágono: emerge (~300ms) + se queda (~500ms)
+      setCartasVolando2D(producciones.map((p, i) => ({ id: Date.now() + i, hex: p.hex, recurso: p.recurso, uid: p.uid })));
+      control3dRef.current?.produccion(vuelos);
+      await new Promise((r) => window.setTimeout(r, 800));
+
+      // 5. Carta viaja al mazo (~600ms) - la animación CSS maneja el vuelo
+      //    Al llegar, se suma +1 al contador con pop
+      await new Promise((r) => window.setTimeout(r, 600));
+      setManoMostrada(manoReal);
+      setPopRecurso(producciones[0]?.recurso ?? null);
+      window.setTimeout(() => setPopRecurso(null), 400);
+
+      // 6. Limpieza
+      setCartasVolando2D([]);
+      setBloqueadoAnim(false);
+      animandoRoll.current = false;
+    };
+
+    run();
 
     return () => {
       window.clearInterval(intervalo);
-      window.clearTimeout(finRoll);
     };
   }, [tirada]);
 
@@ -504,12 +539,12 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   };
   const cambiarBloqueo = (v: boolean) => void intentar(() => bloquearCambios(codigo, uid, v), 'No pude cambiar el bloqueo');
   const miTurnoColocar = enColocacion && soyActual;
-  const puedoConstruir = juego.fase === 'accion' && soyActual;
+  const puedoConstruir = juego.fase === 'accion' && soyActual && !bloqueadoAnim;
   const enMover = juego.fase === 'mover';
   const enRobar = juego.fase === 'robar';
   const enDescartar = juego.fase === 'descartar';
   const enFin = juego.fase === 'fin';
-  const gratis = soyActual && juego.caminosGratis > 0 && (juego.fase === 'tirar' || juego.fase === 'accion');
+  const gratis = soyActual && juego.caminosGratis > 0 && (juego.fase === 'tirar' || juego.fase === 'accion') && !bloqueado;
   const debo = juego.descartes[uid] ?? 0;
   const lugares = puedoConstruir && construyendo && construyendo !== 'camino' ? lugaresPara(geo, juego, uid, construyendo) : [];
   const lugaresCamino = gratis || (puedoConstruir && construyendo === 'camino') ? lugaresPara(geo, juego, uid, 'camino') : [];
@@ -632,6 +667,20 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </g>
         );
       })()}
+      {hexesRipple.map((hex, idx) => {
+        const [r, c] = hex.split(',').map(Number);
+        const [hx, hy] = posicion(partida.modo, r, c);
+        return (
+          <g key={'ripple-' + hex + '-' + idx} pointerEvents="none">
+            {[0, 1, 2].map((k) => (
+              <circle key={k} cx={hx} cy={hy} r={0} fill="none" stroke="#fff" strokeWidth={2} opacity={0.9}>
+                <animate attributeName="r" values="0;50;47" keyTimes="0;0.3;1" dur="0.6s" begin={k * 0.15 + 's'} fill="freeze" />
+                <animate attributeName="opacity" values="0.9;0.5;0" keyTimes="0;0.5;1" dur="0.6s" begin={k * 0.15 + 's'} fill="freeze" />
+              </circle>
+            ))}
+          </g>
+        );
+      })}
       {Array.from(new Set(cartasVolando2D.map((cv) => cv.hex))).map((hex, idx) => {
         const [r, c] = hex.split(',').map(Number);
         const [hx, hy] = posicion(partida.modo, r, c);
@@ -639,8 +688,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           <g key={'ripple-' + hex + '-' + idx} pointerEvents="none">
             {[0, 1, 2].map((k) => (
               <circle key={k} cx={hx} cy={hy} r={0} fill="none" stroke="#fff" strokeWidth={2} opacity={0.9}>
-                <animate attributeName="r" from={0} to={46} dur="1.2s" begin={k * 0.25 + 's'} fill="freeze" />
-                <animate attributeName="opacity" from={0.9} to={0} dur="1.2s" begin={k * 0.25 + 's'} fill="freeze" />
+                <animate attributeName="r" values="0;50;47" keyTimes="0;0.3;1" dur="1.2s" begin={k * 0.2 + 's'} fill="freeze" />
+                <animate attributeName="opacity" values="0.9;0.6;0" keyTimes="0;0.5;1" dur="1.2s" begin={k * 0.2 + 's'} fill="freeze" />
               </circle>
             ))}
           </g>
@@ -653,13 +702,14 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const nombre = cv.recurso.toUpperCase();
         return (
           <g key={cv.id} pointerEvents="none">
-            <rect x={hx - 13} y={hy - 20} width={26} height={38} rx={4} fill={color} stroke="#fff" strokeWidth={2} opacity={1}>
-              <animate attributeName="y" values={`${hy - 20};${hy - 20};${hy + 130}`} keyTimes="0;0.33;1" dur="1.8s" fill="freeze" />
-              <animate attributeName="opacity" values="1;1;0" keyTimes="0;0.67;1" dur="1.8s" fill="freeze" />
+            <rect x={hx - 13} y={hy - 20} width={26} height={38} rx={4} fill={color} stroke="#fff" strokeWidth={2}>
+              <animate attributeName="y" values={`${hy - 20};${hy - 50};${hy - 50};${hy + 130}`} keyTimes="0;0.214;0.571;1" dur="1.4s" fill="freeze" />
+              <animate attributeName="height" values="38;38;38;20" keyTimes="0;0.214;0.571;1" dur="1.4s" fill="freeze" />
+              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.571;1" dur="1.4s" fill="freeze" />
             </rect>
-            <text x={hx} y={hy - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="#fff" opacity={1}>
-              <animate attributeName="y" values={`${hy - 2};${hy - 2};${hy + 128}`} keyTimes="0;0.33;1" dur="1.8s" fill="freeze" />
-              <animate attributeName="opacity" values="1;1;0" keyTimes="0;0.67;1" dur="1.8s" fill="freeze" />
+            <text x={hx} y={hy - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="#fff">
+              <animate attributeName="y" values={`${hy - 2};${hy - 32};${hy - 32};${hy + 128}`} keyTimes="0;0.214;0.571;1" dur="1.4s" fill="freeze" />
+              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.571;1" dur="1.4s" fill="freeze" />
               {nombre.slice(0, 4)}
             </text>
           </g>
@@ -1135,7 +1185,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
             {yoPuedoLanzarOrden && <button className="accion" onClick={() => void lanzarOrden()}>🎲 Lanzar mis dados</button>}
             {enOrden && !yoPuedoLanzarOrden && <span className="espera">Esperando a los demás...</span>}
             {juego.fase === 'tirar' && soyActual && <button className="accion" onClick={() => void tirar()}>🎲 Tirar dados</button>}
-            {juego.fase === 'accion' && soyActual && <button className="accion" onClick={() => void terminar()}>Terminar turno ➜</button>}
+            {juego.fase === 'accion' && soyActual && <button className="accion" disabled={bloqueadoAnim} onClick={() => void terminar()}>Terminar turno ➜</button>}
             {(juego.fase === 'tirar' || juego.fase === 'accion') && !soyActual && <span className="espera">Esperando a {nombreDe(actualUid)}...</span>}
             {enColocacion && !soyActual && <span className="espera">Esperando a {nombreDe(actualUid)}...</span>}
             {error && <div className="error-mini">{error}</div>}
@@ -1145,7 +1195,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           {RECURSOS.map((r) => (
             <div key={r} className="rec" title={NOMBRE_RECURSO[r]}>
               <IconoRecurso tipo={r} />
-              <b>{manoMostrada[r]}</b>
+              <b className={popRecurso === r ? 'pop-num' : ''}>{manoMostrada[r]}</b>
             </div>
           ))}
         </div>
