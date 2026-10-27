@@ -45,7 +45,7 @@ export default function Mesa({ jugadores, juego }: { jugadores: JugadorMesa[]; j
         const c = contarPiezas(juego, p.uid);
         const resto = { camino: LIMITE.camino - c.camino, poblado: LIMITE.poblado - c.poblado, ciudad: LIMITE.ciudad - c.ciudad };
         return (
-          <g key={p.uid} transform={`translate(${pos[0]} ${pos[1]})`}>
+          <g key={p.uid} data-jugador={p.uid} transform={`translate(${pos[0]} ${pos[1]})`}>
             <rect x={-10} y={-10} width={312} height={178} rx={14} fill="rgba(0,0,0,0.25)" />
             <circle cx={10} cy={12} r={9} fill={p.hex} stroke="#ffffff" strokeWidth={2.5} />
             <text x={28} y={20} fontSize={22} fontWeight={700} fill="#ffffff">{p.nombre}</text>

@@ -359,11 +359,11 @@ export function dibujarTablero(modo: Modo, semilla: number = 11, conBallena: boo
     const x = h.x, y = h.y;
     if (h.tipo === 'desert') {
       const primero = mapa.desiertos.length > 0 && mapa.desiertos[0][0] === h.r && mapa.desiertos[0][1] === h.c;
-      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha('desert', rn) + (conBallena && primero ? BALLENA : '') + '</g>';
+      o += '<g data-hex="' + h.r + ',' + h.c + '" transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha('desert', rn) + (conBallena && primero ? BALLENA : '') + '</g>';
     } else {
       const n = h.num;
       const rojo = n === 6 || n === 8;
-      o += '<g transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha(h.tipo, rn) + '</g>';
+      o += '<g data-hex="' + h.r + ',' + h.c + '" transform="translate(' + f(x) + ',' + f(y) + ') scale(' + f(K) + ')">' + ficha(h.tipo, rn) + '</g>';
       fichas += '<circle cx="' + f(x + 1) + '" cy="' + f(y + 3) + '" r="17" fill="#000" opacity=".3"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="17" fill="#fff3d6" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="' + f(x) + '" cy="' + f(y) + '" r="14" fill="none" stroke="#d9c08a" stroke-width=".8"/><text x="' + f(x) + '" y="' + f(y + 3) + '" style="' + txt + 'font-size:18px;fill:' + (rojo ? '#c0392b' : '#3b2a14') + '">' + n + '</text>';
       const d = 6 - Math.abs(7 - n);
       for (let q = 0; q < d; q++) fichas += '<circle cx="' + f(x + (q - (d - 1) / 2) * 4.4) + '" cy="' + f(y + 11) + '" r="1.5" fill="' + (rojo ? '#c0392b' : '#3b2a14') + '"/>';

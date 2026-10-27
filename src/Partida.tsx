@@ -107,6 +107,88 @@ function IconoJugadores() {
   );
 }
 
+const DURACIONES = { pulso: 600, subida: 300, pausa: 500, viaje: 600, escalon: 150 };
+
+const COLOR_RECURSO_DOM: Record<string, string> = {
+  wood: '#2f7a45', brick: '#b9572f', wool: '#86bb4e', grain: '#dfb43e', ore: '#9198a1',
+};
+
+function crearCartaDOM(recurso: string): HTMLDivElement {
+  const carta = document.createElement('div');
+  const color = COLOR_RECURSO_DOM[recurso] ?? '#888';
+  carta.style.cssText = `width:44px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);background:${color};`;
+  carta.textContent = recurso.toUpperCase().slice(0, 4);
+  return carta;
+}
+
+async function volarCarta({ recurso, origen, destino, conSubida = true }: { recurso: string; origen: HTMLElement | null; destino: HTMLElement | null; conSubida?: boolean }) {
+  const capa = document.getElementById('capa-cartas');
+  if (!capa || !origen || !destino) return;
+  const o = origen.getBoundingClientRect();
+  const d = destino.getBoundingClientRect();
+  const x0 = o.left + o.width / 2;
+  const y0 = o.top + o.height / 2;
+  const x1 = d.left + d.width / 2;
+  const y1 = d.top + d.height / 2;
+
+  const carta = crearCartaDOM(recurso);
+  Object.assign(carta.style, {
+    position: 'fixed',
+    left: x0 + 'px',
+    top: y0 + 'px',
+    transform: 'translate(-50%,-50%) scale(0.6)',
+    opacity: '0',
+  });
+  capa.appendChild(carta);
+
+  if (conSubida) {
+    const anim1 = carta.animate([
+      { transform: 'translate(-50%,-50%) scale(0.6)', opacity: 0 },
+      { transform: 'translate(-50%,calc(-50% - 30px)) scale(1)', opacity: 1 }
+    ], { duration: DURACIONES.subida, fill: 'forwards', easing: 'ease-out' });
+    await anim1.finished;
+    await new Promise((r) => setTimeout(r, DURACIONES.pausa));
+  }
+
+  const yStart = conSubida ? y0 - 30 : y0;
+  carta.style.left = x0 + 'px';
+  carta.style.top = yStart + 'px';
+  carta.style.transform = 'translate(-50%,-50%) scale(1)';
+
+  const anim2 = carta.animate([
+    { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+    { transform: 'translate(-50%,-50%) scale(0.5)', opacity: 0.9, left: x1 + 'px', top: y1 + 'px' }
+  ], { duration: DURACIONES.viaje, fill: 'forwards', easing: 'ease-in-out' });
+  await anim2.finished;
+
+  carta.remove();
+}
+
+async function pulsoHexagonos(hexIds: string[]) {
+  const capa = document.getElementById('capa-cartas');
+  if (!capa) return;
+  const anillos: HTMLElement[] = [];
+  for (const hexId of hexIds) {
+    const hex = document.querySelector('[data-hex="' + hexId + '"]');
+    if (!hex) continue;
+    const r = (hex as HTMLElement).getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const anillo = document.createElement('div');
+    anillo.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.8);transform:translate(-50%,-50%) scale(1);pointer-events:none;`;
+    capa.appendChild(anillo);
+    anillos.push(anillo);
+    anillo.animate([
+      { transform: 'translate(-50%,-50%) scale(0.1)', opacity: 0.9 },
+      { transform: 'translate(-50%,-50%) scale(1.06)', opacity: 0.6 },
+      { transform: 'translate(-50%,-50%) scale(2.5)', opacity: 0 }
+    ], { duration: DURACIONES.pulso, fill: 'forwards', easing: 'ease-out' });
+  }
+  await new Promise((r) => setTimeout(r, DURACIONES.pulso));
+  anillos.forEach((a) => a.remove());
+}
+
+
 export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const partida = sala.partida;
   const juego = useMemo(() => (sala.juego ? completar(sala.juego) : null), [sala.juego]);
@@ -181,8 +263,6 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const [panel, setPanel] = useState<Panel>('ninguno');
   const [construyendo, setConstruyendo] = useState<TipoPieza | null>(null);
   const [pendiente, setPendiente] = useState<{ tipo: 'poblado' | 'camino'; id: string } | null>(null);
-  const [cartasVolando2D, setCartasVolando2D] = useState<{ id: number; hex: string; recurso: string; uid: string }[]>([]);
-  const [hexesRipple, setHexesRipple] = useState<string[]>([]);
   const [bloqueadoAnim, setBloqueadoAnim] = useState(false);
   const [popRecurso, setPopRecurso] = useState<string | null>(null);
   const [cambio, setCambio] = useState(false);
@@ -260,27 +340,26 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         return;
       }
 
-      const vuelos: CartaVuelo[] = producciones.map((p) => ({ hex: p.hex, recurso: p.recurso, destino: [0, -0.85] }));
-
       // 3. Pulso en hexágonos (ripple) ~600ms
-      setHexesRipple(Array.from(hexesProductores));
-      await new Promise((r) => window.setTimeout(r, 600));
-      setHexesRipple([]);
+      await pulsoHexagonos(Array.from(hexesProductores));
 
-      // 4. Carta sale del hexágono: emerge (~300ms) + se queda (~500ms)
-      setCartasVolando2D(producciones.map((p, i) => ({ id: Date.now() + i, hex: p.hex, recurso: p.recurso, uid: p.uid })));
-      control3dRef.current?.produccion(vuelos);
-      await new Promise((r) => window.setTimeout(r, 800));
+      // 4-6. Por cada producción: carta emerge, pausa, vuela, y al llegar suma +1
+      const tareas = producciones.map((prod, idx) => async () => {
+        await new Promise((r) => setTimeout(r, idx * DURACIONES.escalon));
+        const hexEl = document.querySelector('[data-hex="' + prod.hex + '"]') as HTMLElement | null;
+        const destEl = (prod.uid === uid)
+          ? document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null
+          : document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null;
+        await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true });
+        // Al llegar: suma +1 con pop
+        setPopRecurso(prod.recurso);
+        window.setTimeout(() => setPopRecurso(null), 400);
+      });
 
-      // 5. Carta viaja al mazo (~600ms) - la animación CSS maneja el vuelo
-      //    Al llegar, se suma +1 al contador con pop
-      await new Promise((r) => window.setTimeout(r, 600));
+      await Promise.all(tareas.map((t) => t()));
+
+      // 7. Actualizar contadores
       setManoMostrada(manoReal);
-      setPopRecurso(producciones[0]?.recurso ?? null);
-      window.setTimeout(() => setPopRecurso(null), 400);
-
-      // 6. Limpieza
-      setCartasVolando2D([]);
       setBloqueadoAnim(false);
       animandoRoll.current = false;
     };
@@ -486,6 +565,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   if (!juego || !partida || !geo) {
     return (
       <div className="partida">
+      <div id="capa-cartas" style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999 }}></div>
         <p className="cargando">Cargando partida...</p>
       </div>
     );
@@ -667,54 +747,6 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </g>
         );
       })()}
-      {hexesRipple.map((hex, idx) => {
-        const [r, c] = hex.split(',').map(Number);
-        const [hx, hy] = posicion(partida.modo, r, c);
-        return (
-          <g key={'ripple-' + hex + '-' + idx} pointerEvents="none">
-            {[0, 1, 2].map((k) => (
-              <circle key={k} cx={hx} cy={hy} r={0} fill="none" stroke="#fff" strokeWidth={2} opacity={0.9}>
-                <animate attributeName="r" values="0;50;47" keyTimes="0;0.3;1" dur="0.6s" begin={k * 0.15 + 's'} fill="freeze" />
-                <animate attributeName="opacity" values="0.9;0.5;0" keyTimes="0;0.5;1" dur="0.6s" begin={k * 0.15 + 's'} fill="freeze" />
-              </circle>
-            ))}
-          </g>
-        );
-      })}
-      {Array.from(new Set(cartasVolando2D.map((cv) => cv.hex))).map((hex, idx) => {
-        const [r, c] = hex.split(',').map(Number);
-        const [hx, hy] = posicion(partida.modo, r, c);
-        return (
-          <g key={'ripple-' + hex + '-' + idx} pointerEvents="none">
-            {[0, 1, 2].map((k) => (
-              <circle key={k} cx={hx} cy={hy} r={0} fill="none" stroke="#fff" strokeWidth={2} opacity={0.9}>
-                <animate attributeName="r" values="0;50;47" keyTimes="0;0.3;1" dur="1.2s" begin={k * 0.2 + 's'} fill="freeze" />
-                <animate attributeName="opacity" values="0.9;0.6;0" keyTimes="0;0.5;1" dur="1.2s" begin={k * 0.2 + 's'} fill="freeze" />
-              </circle>
-            ))}
-          </g>
-        );
-      })}
-      {cartasVolando2D.map((cv) => {
-        const [r, c] = cv.hex.split(',').map(Number);
-        const [hx, hy] = posicion(partida.modo, r, c);
-        const color = COLOR[cv.recurso as keyof typeof COLOR] ?? '#888888';
-        const nombre = cv.recurso.toUpperCase();
-        return (
-          <g key={cv.id} pointerEvents="none">
-            <rect x={hx - 13} y={hy - 20} width={26} height={38} rx={4} fill={color} stroke="#fff" strokeWidth={2}>
-              <animate attributeName="y" values={`${hy - 20};${hy - 50};${hy - 50};${hy + 130}`} keyTimes="0;0.214;0.571;1" dur="1.4s" fill="freeze" />
-              <animate attributeName="height" values="38;38;38;20" keyTimes="0;0.214;0.571;1" dur="1.4s" fill="freeze" />
-              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.571;1" dur="1.4s" fill="freeze" />
-            </rect>
-            <text x={hx} y={hy - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="#fff">
-              <animate attributeName="y" values={`${hy - 2};${hy - 32};${hy - 32};${hy + 128}`} keyTimes="0;0.214;0.571;1" dur="1.4s" fill="freeze" />
-              <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.571;1" dur="1.4s" fill="freeze" />
-              {nombre.slice(0, 4)}
-            </text>
-          </g>
-        );
-      })}
     </g>
   );
 
