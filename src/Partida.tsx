@@ -246,10 +246,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
         setManoMostrada(manoReal);
         animandoRoll.current = false;
-      }, 500);
+      }, 800);
 
       return () => window.clearTimeout(finPausa);
-    }, 1100);
+    }, 2000);
 
     return () => {
       window.clearInterval(intervalo);
