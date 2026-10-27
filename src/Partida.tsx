@@ -628,6 +628,20 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </g>
         );
       })()}
+      {Array.from(new Set(cartasVolando2D.map((cv) => cv.hex))).map((hex, idx) => {
+        const [r, c] = hex.split(',').map(Number);
+        const [hx, hy] = posicion(partida.modo, r, c);
+        return (
+          <g key={'ripple-' + hex + '-' + idx} pointerEvents="none">
+            {[0, 1, 2].map((k) => (
+              <circle key={k} cx={hx} cy={hy} r={0} fill="none" stroke="#fff" strokeWidth={2} opacity={0.9}>
+                <animate attributeName="r" from={0} to={46} dur="1.2s" begin={k * 0.25 + 's'} fill="freeze" />
+                <animate attributeName="opacity" from={0.9} to={0} dur="1.2s" begin={k * 0.25 + 's'} fill="freeze" />
+              </circle>
+            ))}
+          </g>
+        );
+      })}
       {cartasVolando2D.map((cv) => {
         const [r, c] = cv.hex.split(',').map(Number);
         const [hx, hy] = posicion(partida.modo, r, c);
