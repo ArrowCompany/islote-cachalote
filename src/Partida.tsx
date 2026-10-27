@@ -255,7 +255,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
       window.clearInterval(intervalo);
       window.clearTimeout(finRoll);
     };
-  }, [tirada, juego, geo, partida, manoReal]);
+  }, [tirada]);
 
   useEffect(() => {
     if (!animandoRoll.current) {
