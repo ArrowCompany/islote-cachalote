@@ -58,7 +58,7 @@ export default function Mesa({ jugadores, juego }: { jugadores: JugadorMesa[]; j
             ))}
             <text x={294} y={20} textAnchor="end" fontSize={16} fill="#f3e6c4">caminos {resto.camino}/{LIMITE.camino}</text>
             {Array.from({ length: resto.poblado }, (_, k) => (
-              <g key={k} transform={`translate(${24 + k * 36} 132) scale(0.85)`}>
+              <g key={k} transform={`translate(${24 + k * 36} 132) scale(0.8)`}>
                 <FormaPoblado color={p.hex} />
               </g>
             ))}

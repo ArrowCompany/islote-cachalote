@@ -584,7 +584,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const q = geo.vertices[v];
         if (!q) return null;
         return (
-          <g key={v} transform={`translate(${q.x} ${q.y}) scale(0.95)`} pointerEvents="none">
+          <g key={v} transform={`translate(${q.x} ${q.y}) scale(0.8)`} pointerEvents="none">
             {p.tipo === 'ciudad' ? <FormaCiudad color={colorJ(p.uid)} /> : <FormaPoblado color={colorJ(p.uid)} />}
           </g>
         );

@@ -33,15 +33,15 @@ export const RADIO_MAR = 0.985;
 export const RADIO_ARENA = 1.02;
 
 // --- Piezas (Etapa 2; quedan definidas aquí para que todo use la misma escala) ---
-export const LARGO_CAMINO = 1.0; // un camino ocupa exactamente una arista
-export const ANCHO_CAMINO = 0.24; // ~25% del lado, como en el juego real
-export const ALTO_CAMINO = 0.1;
-export const RADIO_POBLADO = 0.24;
-export const ALTO_POBLADO = 0.46;
-export const RADIO_CIUDAD = 0.34;
-export const ALTO_CIUDAD = 0.58;
-export const RADIO_LADRON = 0.2;
-export const ALTO_LADRON = 0.92;
+export const LARGO_CAMINO = 0.8; // un camino ocupa exactamente una arista
+export const ANCHO_CAMINO = 0.192; // ~25% del lado, como en el juego real
+export const ALTO_CAMINO = 0.08;
+export const RADIO_POBLADO = 0.192;
+export const ALTO_POBLADO = 0.368;
+export const RADIO_CIUDAD = 0.272;
+export const ALTO_CIUDAD = 0.464;
+export const RADIO_LADRON = 0.16;
+export const ALTO_LADRON = 0.736;
 
 // --- Alturas de apoyo (para que nada quede flotando ni enterrado) ---
 export const Y_ARENA = 0; // la arena nace en el nivel del agua

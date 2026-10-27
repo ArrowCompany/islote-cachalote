@@ -91,7 +91,7 @@ export function FormaPoblado({ color }: { color: string }) {
   const borde = oscurecer(color, 0.5);
   return (
     <g transform="translate(-20 -40)">
-      <polygon points="18,8 26,5 38,19 30,22" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
+      <polygon points="18,8 26,5 38,19 30,22" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       <polygon points="18,8 26,5 38,19 30,22" fill="#fff" fillOpacity={0.25} stroke="none" />
       <polygon points="30,22 38,19 38,36 30,40" fill={color} stroke={borde} strokeWidth={1} strokeLinejoin="round" />
       <polygon points="30,22 38,19 38,36 30,40" fill="#000" fillOpacity={0.3} stroke="none" />
