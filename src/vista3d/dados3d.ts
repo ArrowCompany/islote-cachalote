@@ -66,7 +66,7 @@ export function crearDados(T: Three): Dados3D {
 
   let animando = false;
   let t = 0;
-  const dur = 1.1; // 1.1 segundos rodando
+  const dur = 2.0; // 2.0 segundos rodando (mas lento)
   let val1 = 1, val2 = 1;
   let finCallback: (() => void) | null = null;
 

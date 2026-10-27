@@ -240,7 +240,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           if (vuelos.length > 0) {
             control3dRef.current?.produccion(vuelos);
             setCartasVolando2D(vuelos.map((v, i) => ({ id: Date.now() + i, hex: v.hex, recurso: v.recurso })));
-            window.setTimeout(() => setCartasVolando2D([]), 1200);
+            window.setTimeout(() => setCartasVolando2D([]), 2500);
           }
         }
 
@@ -631,14 +631,18 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const [r, c] = cv.hex.split(',').map(Number);
         const [hx, hy] = posicion(partida.modo, r, c);
         const color = COLOR[cv.recurso as keyof typeof COLOR] ?? '#888888';
+        const nombre = cv.recurso.toUpperCase();
         return (
           <g key={cv.id} pointerEvents="none">
-            <g transform={`translate(${hx} ${hy})`}>
-              <rect x={-14} y={-20} width={28} height={40} rx={4} fill={color} stroke="#fff" strokeWidth={2} opacity={1}>
-                <animate attributeName="opacity" from="1" to="0" dur="0.9s" fill="freeze" />
-              </rect>
-              <animateTransform attributeName="transform" type="translate" from="0 0" to="0 120" dur="0.9s" fill="freeze" additive="sum" />
-            </g>
+            <rect x={hx - 13} y={hy - 20} width={26} height={38} rx={4} fill={color} stroke="#fff" strokeWidth={2} opacity={1}>
+              <animate attributeName="y" values={`${hy - 20};${hy - 20};${hy + 130}`} keyTimes="0;0.33;1" dur="1.8s" fill="freeze" />
+              <animate attributeName="opacity" values="1;1;0" keyTimes="0;0.67;1" dur="1.8s" fill="freeze" />
+            </rect>
+            <text x={hx} y={hy - 2} textAnchor="middle" fontSize={9} fontWeight={700} fill="#fff" opacity={1}>
+              <animate attributeName="y" values={`${hy - 2};${hy - 2};${hy + 128}`} keyTimes="0;0.33;1" dur="1.8s" fill="freeze" />
+              <animate attributeName="opacity" values="1;1;0" keyTimes="0;0.67;1" dur="1.8s" fill="freeze" />
+              {nombre.slice(0, 4)}
+            </text>
           </g>
         );
       })}

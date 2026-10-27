@@ -103,8 +103,8 @@ export function crearVueloCartas(T: Three, mapa: Mapa): Vuelo3D {
         z0,
         ndcX: p.destino[0],
         ndcY: p.destino[1],
-        t: -idx * 0.15,
-        dur: 0.9,
+        t: -0.5 - idx * 0.2,
+        dur: 1.4,
       });
     });
   };
