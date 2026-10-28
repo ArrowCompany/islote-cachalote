@@ -109,72 +109,121 @@ function IconoJugadores() {
 
 const DURACIONES = { pulso: 600, subida: 300, pausa: 500, viaje: 600, escalon: 150 };
 
-const COLOR_RECURSO_DOM: Record<string, string> = {
-  wood: '#2f7a45', brick: '#b9572f', wool: '#86bb4e', grain: '#dfb43e', ore: '#9198a1',
+const SVG_ICONOS_RECURSO: Record<string, string> = {
+  wood: '<g stroke-width="1.5" stroke="#5a3b1e"><rect x="3" y="28" width="32" height="11" rx="5.5" fill="#8a5a2b"/><circle cx="33" cy="33.5" r="5.5" fill="#ecc88e"/><circle cx="33" cy="33.5" r="2.2" fill="none" stroke="#b98a4a"/><rect x="9" y="16" width="32" height="11" rx="5.5" fill="#a06a33"/><circle cx="39" cy="21.5" r="5.5" fill="#f3d9a6"/><circle cx="39" cy="21.5" r="2.2" fill="none" stroke="#b98a4a"/><rect x="5" y="5" width="30" height="10" rx="5" fill="#8a5a2b"/><circle cx="33" cy="10" r="5" fill="#ecc88e"/></g>',
+  brick: '<g stroke-width="1.5" stroke="#7a1f1a"><rect x="3" y="30" width="20" height="11" rx="2" fill="#d6453d"/><rect x="25" y="30" width="20" height="11" rx="2" fill="#c93a32"/><rect x="14" y="18" width="20" height="11" rx="2" fill="#e0574e"/><rect x="14" y="6" width="20" height="11" rx="2" fill="#d6453d"/><path d="M6 33h14M28 33h14M17 21h14M17 9h14" stroke="#f4a29b" stroke-width="1.5"/></g>',
+  wool: '<g><path d="M15 36v8M31 36v8" stroke="#3b2a14" stroke-width="3.5" stroke-linecap="round"/><g fill="#fffdf4" stroke="#b8c0a0" stroke-width="1.2"><circle cx="16" cy="24" r="10"/><circle cx="27" cy="21" r="10"/><circle cx="23" cy="31" r="9"/></g><ellipse cx="39" cy="26" rx="5.5" ry="6.5" fill="#3b2a14"/><circle cx="40" cy="24" r="1.3" fill="#fffdf4"/></g>',
+  grain: '<g><path d="M24 45V13" stroke="#9a7a1c" stroke-width="2.6" stroke-linecap="round"/><g fill="#f2c23c" stroke="#b98a14" stroke-width="1"><ellipse cx="24" cy="7" rx="3.6" ry="6"/><ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)"/><ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)"/><ellipse cx="17" cy="26" rx="3.6" ry="6.5" transform="rotate(-28 17 26)"/><ellipse cx="31" cy="26" rx="3.6" ry="6.5" transform="rotate(28 31 26)"/><ellipse cx="18" cy="37" rx="3.6" ry="6" transform="rotate(-28 18 37)"/><ellipse cx="30" cy="37" rx="3.6" ry="6" transform="rotate(28 30 37)"/></g></g>',
+  ore: '<g><ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26"/><path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" stroke-width="2.6" stroke-linecap="round" fill="none"/><path d="M17 33H31M19 24H29M20.5 15H27.5" stroke="#4b5160" stroke-width="1.6" fill="none"/><rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" stroke-width="1.3"/><circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" stroke-width="0.8"/></g>',
 };
 
-function crearCartaDOM(recurso: string): HTMLDivElement {
-  const carta = document.createElement('div');
-  const color = COLOR_RECURSO_DOM[recurso] ?? '#888';
-  carta.style.cssText = `width:44px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);background:${color};`;
-  carta.textContent = recurso.toUpperCase().slice(0, 4);
-  return carta;
+const COLOR_FONDO_RECURSO: Record<string, string> = {
+  wood: '#d4ebd4',
+  brick: '#f5d6cc',
+  wool: '#e2f0d9',
+  grain: '#fef3c7',
+  ore: '#e2e8f0',
+};
+
+function traducirRecurso(r: string): Recurso {
+  const map: Record<string, Recurso> = {
+    wood: 'wood', madera: 'wood',
+    brick: 'brick', ladrillo: 'brick',
+    wool: 'wool', oveja: 'wool', lana: 'wool',
+    grain: 'grain', trigo: 'grain',
+    ore: 'ore', mineral: 'ore',
+  };
+  const key = (r || '').toLowerCase();
+  if (map[key]) return map[key];
+  if (RECURSOS.includes(key as Recurso)) return key as Recurso;
+  console.warn('sin ícono para', r);
+  return 'wood';
 }
 
-async function volarCarta({ recurso, origen, destino, conSubida = true, prod }: { recurso: string; origen: HTMLElement | null; destino: HTMLElement | null; conSubida?: boolean; prod?: any }) {
-  const capa = document.getElementById('capa-cartas');
-  const destEl = destino || (prod ? document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null : null) || document.body;
-
-  console.log('ORIGEN/DESTINO', origen, destEl, origen?.getBoundingClientRect(), destEl?.getBoundingClientRect());
-
-  if (!capa || !origen || !destEl) {
-    console.warn('volarCarta cancelada', { capa, origen, destino: destEl, prod });
-    return;
+function obtenerCapa(): HTMLElement {
+  let capa = document.getElementById('capa-cartas');
+  if (!capa) {
+    capa = document.createElement('div');
+    capa.id = 'capa-cartas';
+    Object.assign(capa.style, {
+      position: 'fixed', top: '0', left: '0',
+      width: '100vw', height: '100vh',
+      pointerEvents: 'none', zIndex: '2147483647'
+    });
+    document.body.appendChild(capa);
   }
-  const o = origen.getBoundingClientRect();
-  const d = destEl.getBoundingClientRect();
-  const x0 = o.left + o.width / 2;
-  const y0 = o.top + o.height / 2;
-  const x1 = d.left + d.width / 2;
-  const y1 = d.top + d.height / 2;
+  return capa;
+}
 
-  const carta = crearCartaDOM(recurso);
-  Object.assign(carta.style, {
-    position: 'fixed',
-    left: x0 + 'px',
-    top: y0 + 'px',
-    transform: 'translate(-50%,-50%) scale(0.6)',
-    opacity: '0',
-  });
-  capa.appendChild(carta);
+async function volarCarta({ recurso, origen, destino, conSubida = true, reverso = false, prod }: { recurso: string; origen: HTMLElement | null; destino: HTMLElement | null; conSubida?: boolean; reverso?: boolean; prod?: { uid: string; recurso: string } }) {
+  try {
+    const capa = obtenerCapa();
 
-  if (conSubida) {
-    const anim1 = carta.animate([
-      { transform: 'translate(-50%,-50%) scale(0.6)', opacity: 0 },
-      { transform: 'translate(-50%,calc(-50% - 30px)) scale(1)', opacity: 1 }
-    ], { duration: DURACIONES.subida, fill: 'forwards', easing: 'ease-out' });
-    await anim1.finished;
-    await new Promise((r) => setTimeout(r, DURACIONES.pausa));
+    let destEl = destino;
+    if (!destEl && prod) {
+      destEl = (document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null) ||
+               (document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null) ||
+               (document.querySelector('[data-mano="' + prod.uid + '"]') as HTMLElement | null);
+    }
+    destEl = destEl || document.body;
+
+    console.log('ORIGEN/DESTINO', origen, destEl, origen?.getBoundingClientRect(), destEl?.getBoundingClientRect());
+
+    if (!origen || !destEl) {
+      console.warn('volarCarta cancelada', { origen, destino: destEl, prod });
+      return;
+    }
+
+    const o = origen.getBoundingClientRect();
+    const d = destEl.getBoundingClientRect();
+    const x0 = o.left + o.width / 2;
+    const y0 = o.top + o.height / 2;
+    const x1 = d.left + d.width / 2;
+    const y1 = d.top + d.height / 2;
+
+    const tipoRec = traducirRecurso(recurso);
+    const bgColor = reverso ? '#8a2a2a' : (COLOR_FONDO_RECURSO[tipoRec] ?? '#f3e6c4');
+    const svgContent = reverso 
+      ? '<rect width="48" height="48" fill="#b33939" opacity="0.6"/><path d="M0 0l48 48M48 0L0 48" stroke="#8a5a2b" stroke-width="2"/>'
+      : (SVG_ICONOS_RECURSO[tipoRec] ?? SVG_ICONOS_RECURSO['wood']);
+
+    const carta = document.createElement('div');
+    carta.style.cssText = `position:absolute;left:0;top:0;width:52px;height:72px;background:${bgColor};border:1px solid #8a5a2b;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);opacity:1;z-index:2147483647;pointer-events:none;overflow:hidden;`;
+    
+    carta.innerHTML = `<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true">${svgContent}</svg>`;
+
+    capa.appendChild(carta);
+    console.log('CARTA DOM', carta.getBoundingClientRect(), getComputedStyle(carta).opacity, getComputedStyle(carta).display, origen, destEl);
+
+    if (conSubida) {
+      const anim1 = carta.animate([
+        { transform: `translate(${x0 - 26}px, ${y0 - 36}px) scale(0.6)`, opacity: 0 },
+        { transform: `translate(${x0 - 26}px, ${y0 - 36 - 30}px) scale(1)`, opacity: 1 }
+      ], { duration: DURACIONES.subida, fill: 'forwards', easing: 'ease-out' });
+      await anim1.finished;
+      await new Promise((r) => setTimeout(r, DURACIONES.pausa));
+    }
+
+    const startX = x0 - 26;
+    const startY = conSubida ? y0 - 36 - 30 : y0 - 36;
+    const endX = x1 - 26;
+    const endY = y1 - 36;
+
+    const anim2 = carta.animate([
+      { transform: `translate(${startX}px, ${startY}px) scale(1)`, opacity: 1 },
+      { transform: `translate(${endX}px, ${endY}px) scale(0.8)`, opacity: 1 }
+    ], { duration: DURACIONES.viaje, fill: 'forwards', easing: 'ease-in-out' });
+    await anim2.finished;
+
+    carta.remove();
+    console.log('CARTA LLEGO', recurso);
+  } catch (err) {
+    console.error('Error en volarCarta:', err);
   }
-
-  const yStart = conSubida ? y0 - 30 : y0;
-  carta.style.left = x0 + 'px';
-  carta.style.top = yStart + 'px';
-  carta.style.transform = 'translate(-50%,-50%) scale(1)';
-
-  const anim2 = carta.animate([
-    { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
-    { transform: 'translate(-50%,-50%) scale(0.5)', opacity: 0.9, left: x1 + 'px', top: y1 + 'px' }
-  ], { duration: DURACIONES.viaje, fill: 'forwards', easing: 'ease-in-out' });
-  await anim2.finished;
-
-  carta.remove();
-  console.log('CARTA LLEGO', recurso);
 }
 
 async function pulsoHexagonos(hexIds: string[]) {
-  const capa = document.getElementById('capa-cartas');
-  if (!capa) return;
+  const capa = obtenerCapa();
   const anillos: HTMLElement[] = [];
   for (const hexId of hexIds) {
     const hex = document.querySelector('[data-hex="' + hexId + '"]');
@@ -444,6 +493,157 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const prevActual = useRef(actualUid);
   const prevPiezas = useRef(piezasN);
 
+  const prevManosRef = useRef(sala.manos ?? {});
+  useEffect(() => {
+    if (!sala.manos || !juego) return;
+    const prev = prevManosRef.current;
+    const curr = sala.manos;
+
+    let thief: string | null = null;
+    let victim: string | null = null;
+    let recursoRobado: Recurso | null = null;
+
+    for (const id of juego.orden) {
+      const prevM = prev[id] ?? {};
+      const currM = curr[id] ?? {};
+      for (const r of RECURSOS) {
+        const diff = (currM[r] ?? 0) - (prevM[r] ?? 0);
+        if (diff === 1) thief = id;
+        if (diff === -1) {
+          victim = id;
+          recursoRobado = r;
+        }
+      }
+    }
+
+    if (thief && victim && recursoRobado && thief !== victim) {
+      const origenEl = document.querySelector('[data-jugador="' + victim + '"][data-recurso="' + recursoRobado + '"]') || document.querySelector('[data-mano="' + victim + '"]');
+      const destinoEl = document.querySelector('[data-jugador="' + thief + '"][data-recurso="' + recursoRobado + '"]') || document.querySelector('[data-jugador="' + thief + '"]') || document.querySelector('[data-mano="' + thief + '"]');
+
+      if (victim === uid) {
+        setManoMostrada((prevM) => ({
+          ...prevM,
+          [recursoRobado!]: Math.max(0, (prevM[recursoRobado!] ?? 0) - 1),
+        }));
+      }
+
+      void (async () => {
+        await volarCarta({
+          recurso: recursoRobado!,
+          origen: origenEl as HTMLElement,
+          destino: destinoEl as HTMLElement,
+          conSubida: false,
+          reverso: thief !== uid,
+          prod: { uid: thief, recurso: recursoRobado! }
+        });
+
+        if (thief === uid) {
+          setManoMostrada((prevM) => ({
+            ...prevM,
+            [recursoRobado!]: (prevM[recursoRobado!] ?? 0) + 1,
+          }));
+        }
+      })();
+    }
+
+    prevManosRef.current = curr;
+  }, [sala.manos, juego, uid]);
+
+
+
+  const prevManosDescRef = useRef(sala.manos ?? {});
+  useEffect(() => {
+    if (!sala.manos || !juego) return;
+    const prev = prevManosDescRef.current;
+    const curr = sala.manos;
+
+    for (const id of juego.orden) {
+      const prevM = prev[id] ?? {};
+      const currM = curr[id] ?? {};
+      for (const r of RECURSOS) {
+        const diff = (prevM[r] ?? 0) - (currM[r] ?? 0);
+        if (diff > 0) {
+          void (async () => {
+            const ladronEl = document.querySelector('[data-ladron]') || document.body;
+            for (let i = 0; i < diff; i++) {
+              await new Promise((res) => setTimeout(res, i * DURACIONES.escalon));
+              const origenEl = document.querySelector('[data-jugador="' + id + '"][data-recurso="' + r + '"]') || document.querySelector('[data-mano="' + id + '"]');
+
+              if (id === uid) {
+                setManoMostrada((prevM) => ({
+                  ...prevM,
+                  [r]: Math.max(0, (prevM[r] ?? 0) - 1),
+                }));
+              }
+
+              await volarCarta({
+                recurso: r,
+                origen: origenEl as HTMLElement,
+                destino: ladronEl as HTMLElement,
+                conSubida: true,
+                reverso: id !== uid,
+                prod: { uid: id, recurso: r }
+              });
+            }
+          })();
+        }
+      }
+    }
+
+    prevManosDescRef.current = curr;
+  }, [sala.manos, juego, uid]);
+
+  const prevPobladosLen = useRef(Object.keys(juego?.poblados ?? {}).length);
+  useEffect(() => {
+    if (!juego || !geo || !partida) return;
+    const currLen = Object.keys(juego.poblados).length;
+    if (currLen > prevPobladosLen.current && juego.fase === 'colocacion' && juego.paso >= juego.orden.length) {
+      const allVerts = Object.entries(juego.poblados);
+      const [nuevoVertice, nuevaPieza] = allVerts[allVerts.length - 1] ?? [];
+      if (nuevoVertice && nuevaPieza) {
+        const mapa = mapaDe(partida.modo, partida.semilla);
+        const vert = geo.vertices[nuevoVertice];
+        if (vert && vert.hexes) {
+          const hexesAdyacentes = vert.hexes
+            .map(([r, c]) => mapa.hexes.find((h) => h.r === r && h.c === c))
+            .filter((h): h is NonNullable<typeof h> => !!h && h.tipo !== 'desert');
+
+          if (hexesAdyacentes.length > 0) {
+            const hexIds = hexesAdyacentes.map((h) => h.r + ',' + h.c);
+            void (async () => {
+              await pulsoHexagonos(hexIds);
+              const tareas = hexesAdyacentes.map((h, idx) => async () => {
+                await new Promise((r) => setTimeout(r, idx * DURACIONES.escalon));
+                const hexEl = document.querySelector('[data-hex="' + h.r + ',' + h.c + '"]') as HTMLElement | null;
+                const destEl = (nuevaPieza.uid === uid)
+                  ? document.querySelector('[data-jugador="' + uid + '"][data-recurso="' + h.tipo + '"]') as HTMLElement | null
+                  : document.querySelector('[data-jugador="' + nuevaPieza.uid + '"]') as HTMLElement | null;
+
+                await volarCarta({
+                  recurso: h.tipo,
+                  origen: hexEl,
+                  destino: destEl,
+                  conSubida: true,
+                  reverso: nuevaPieza.uid !== uid,
+                  prod: { uid: nuevaPieza.uid, recurso: h.tipo }
+                });
+
+                if (nuevaPieza.uid === uid) {
+                  setManoMostrada((prev) => ({
+                    ...prev,
+                    [h.tipo as Recurso]: ((prev as any)[h.tipo] ?? 0) + 1,
+                  }));
+                }
+              });
+              await Promise.all(tareas.map((t) => t()));
+            })();
+          }
+        }
+      }
+    }
+    prevPobladosLen.current = currLen;
+  }, [juego?.poblados, juego?.fase, juego?.paso, geo, partida, uid]);
+
   useEffect(() => {
     sonido.iniciar();
     const h = () => sonido.iniciar();
@@ -583,7 +783,6 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   if (!juego || !partida || !geo) {
     return (
       <div className="partida">
-      <div id="capa-cartas" style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999 }}></div>
         <p className="cargando">Cargando partida...</p>
       </div>
     );
@@ -722,7 +921,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           </g>
         );
       })}
-      <g pointerEvents="none" dangerouslySetInnerHTML={{ __html: ballena(bx, by) }} />
+      <g pointerEvents="none" data-ladron={juego.ladron} dangerouslySetInnerHTML={{ __html: ballena(bx, by) }} />
       {eValidas.map((e) => {
         const a = geo.aristas[e];
         const va = geo.vertices[a.a];
@@ -884,7 +1083,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
             {listaJugadores.map((id, i) => {
               const e = juego.stats[id] ?? { cartas: 0, desarrollo: 0, caballeros: 0, puntos: 0 };
               return (
-                <div key={id} className={id === actualUid ? 'jug actual' : 'jug'} data-mano={id}>
+                <div key={id} className={id === actualUid ? 'jug actual' : 'jug'} data-mano={id} data-jugador={id}>
                   <div className="jug-nombre">
                     <span className="punto" style={{ background: colorJ(id) }} />
                     <span>
