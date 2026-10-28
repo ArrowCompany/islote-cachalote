@@ -14,7 +14,7 @@ import type { Control3D } from './vista3d/escena';
 import * as sonido from './sonido';
 import type { ModoSonido } from './sonido';
 import Mesa from './Mesa';
-import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones, oscurecer } from './piezas';
+import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones } from './piezas';
 import './partida.css';
 
 type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void };
@@ -540,6 +540,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
                         (document.querySelector('[data-mano="' + thief + '"]') as HTMLElement | null);
 
       if (victim === uid) {
+        ultimoCambioLocal.current = Date.now();
         setManoMostrada((prevM) => ({
           ...prevM,
           [recursoRobado!]: Math.max(0, (prevM[recursoRobado!] ?? 0) - 1),
@@ -558,6 +559,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         });
 
         if (thief === uid) {
+          ultimoCambioLocal.current = Date.now();
           setManoMostrada((prevM) => ({
             ...prevM,
             [recursoRobado!]: (prevM[recursoRobado!] ?? 0) + 1,
@@ -590,6 +592,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               const origenEl = document.querySelector('[data-jugador="' + id + '"][data-recurso="' + r + '"]') || document.querySelector('[data-mano="' + id + '"]');
 
               if (id === uid) {
+                ultimoCambioLocal.current = Date.now();
                 setManoMostrada((prevM) => ({
                   ...prevM,
                   [r]: Math.max(0, (prevM[r] ?? 0) - 1),
@@ -884,6 +887,11 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     setUsando(null);
     setElegidos([]);
     setPanel('ninguno');
+    if (c.tipo === 'abundancia' && (param as any).dar) {
+      ultimoCambioLocal.current = Date.now();
+      const elegido = (param as any).dar[0];
+      setManoMostrada((prev) => ({ ...prev, [elegido]: ((prev as any)[elegido] ?? 0) + 2 }));
+    }
     void intentar(() => usarCarta(codigo, uid, numTurno, c.id, param), 'No pude jugar la carta');
   };
   const puedeJugar = (c: CartaDes) => soyActual && (juego.fase === 'tirar' || juego.fase === 'accion') && !juego.jugoCarta && c.tipo !== 'punto' && c.turno < juego.rondaTurno;
@@ -932,16 +940,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         if (!a) return null;
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
-        const cx = (va.x + vb.x) / 2;
-        const cy = (va.y + vb.y) / 2;
-        const dx = vb.x - va.x;
-        const dy = vb.y - va.y;
-        const len = Math.hypot(dx, dy) * 0.7;
-        const ang = Math.atan2(dy, dx) * 180 / Math.PI;
         return (
           <g key={e} pointerEvents="none">
-            <rect x={-len/2} y={-5} width={len} height={10} rx={2} fill={colorJ(dueno)} stroke={oscurecer(colorJ(dueno), 0.5)} strokeWidth={1} transform={`translate(${cx} ${cy}) rotate(${ang})`} />
-            <rect x={-len/2} y={-5} width={len} height={3} rx={2} fill="#fff" fillOpacity={0.25} transform={`translate(${cx} ${cy}) rotate(${ang})`} />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={10} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={6} strokeLinecap="round" />
           </g>
         );
       })}
@@ -991,9 +993,9 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
         return (
-          <g pointerEvents="none" opacity={0.6}>
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={miColor} strokeWidth={7} strokeLinecap="round" />
+          <g pointerEvents="none" opacity={0.9}>
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={10} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={miColor} strokeWidth={6} strokeLinecap="round" />
           </g>
         );
       })()}
@@ -1162,8 +1164,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
                   <svg viewBox="-20 -25 40 38" width="34" height="32" aria-hidden="true">
                     {t === 'camino' ? (
                       <g>
-                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#000000" strokeWidth={13} strokeLinecap="round" />
-                        <line x1={-16} y1={6} x2={16} y2={-12} stroke={miColor} strokeWidth={7} strokeLinecap="round" />
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#000000" strokeWidth={10} strokeLinecap="round" />
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke={miColor} strokeWidth={6} strokeLinecap="round" />
                         <path d={listones(-16, 6, 16, -12, 1)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.4} fill="none" />
                       </g>
                     ) : t === 'poblado' ? <FormaPoblado color={miColor} /> : <FormaCiudad color={miColor} />}

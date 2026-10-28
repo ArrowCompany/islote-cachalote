@@ -10,7 +10,7 @@ import { mapaDe } from './tablero';
 import type { Modo } from './tablero';
 
 export const COLORES: { id: string; nombre: string; hex: string }[] = [
-  { id: 'amarillo', nombre: 'Amarillo', hex: '#f5c400' },
+  { id: 'amarillo', nombre: 'Amarillo', hex: '#FFD21F' },
   { id: 'azul', nombre: 'Azul oscuro', hex: '#1e3a8a' },
   { id: 'rojo', nombre: 'Rojo', hex: '#d62828' },
   { id: 'verde', nombre: 'Verde', hex: '#2e9e44' },

@@ -90,11 +90,10 @@ export function listones(x1: number, y1: number, x2: number, y2: number, k: numb
 export function FormaPoblado({ color }: { color: string }) {
   return (
     <g transform="translate(-20 -40)">
-      <polygon points="18,8 26,5 38,19 30,22" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="18,8 26,5 38,19 30,22" fill="#fff" fillOpacity={0.25} stroke="none" />
-      <polygon points="30,22 38,19 38,36 30,40" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="30,22 38,19 38,36 30,40" fill="#000" fillOpacity={0.3} stroke="none" />
-      <polygon points="6,40 6,22 18,8 30,22 30,40" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="18,8 26,5 38,19 30,22" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="18,8 26,5 38,19 30,22" fill="#fff" fillOpacity={0.15} stroke="none" />
+      <polygon points="30,22 38,19 38,36 30,40" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="6,40 6,22 18,8 30,22 30,40" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </g>
   );
 }
@@ -102,16 +101,14 @@ export function FormaPoblado({ color }: { color: string }) {
 export function FormaCiudad({ color }: { color: string }) {
   return (
     <g transform="translate(-35 -49)">
-      <polygon points="26,34 32,28 66,28 60,34" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="26,34 32,28 66,28 60,34" fill="#fff" fillOpacity={0.25} stroke="none" />
-      <polygon points="60,34 66,28 66,48 60,52" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="60,34 66,28 66,48 60,52" fill="#000" fillOpacity={0.3} stroke="none" />
-      <polygon points="26,52 26,34 60,34 60,52" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="16,6 24,3 34,16 26,22" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="16,6 24,3 34,16 26,22" fill="#fff" fillOpacity={0.25} stroke="none" />
-      <polygon points="26,22 34,16 34,48 26,52" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <polygon points="26,22 34,16 34,48 26,52" fill="#000" fillOpacity={0.3} stroke="none" />
-      <polygon points="4,52 4,22 16,6 26,22 26,52" fill={color} stroke="#000" strokeWidth={1.4} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="26,34 32,28 66,28 60,34" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="26,34 32,28 66,28 60,34" fill="#fff" fillOpacity={0.15} stroke="none" />
+      <polygon points="60,34 66,28 66,48 60,52" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="26,52 26,34 60,34 60,52" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="16,6 24,3 34,16 26,22" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="16,6 24,3 34,16 26,22" fill="#fff" fillOpacity={0.15} stroke="none" />
+      <polygon points="26,22 34,16 34,48 26,52" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <polygon points="4,52 4,22 16,6 26,22 26,52" fill={color} stroke="#000" strokeWidth={1.6} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </g>
   );
 }

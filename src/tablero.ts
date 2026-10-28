@@ -11,10 +11,10 @@ export type Vertice = { id: string; x: number; y: number; hexes: Celda[]; vecino
 export type Arista = { id: string; a: string; b: string };
 export type Geometria = { vertices: Record<string, Vertice>; aristas: Record<string, Arista>; listaV: Vertice[]; listaA: Arista[] };
 
-export const S = 46;
+export const S = 55;
 const W = Math.sqrt(3) * S;
-const RH = 69;
-const K = S / 46;
+const RH = 82.5;
+const K = 1;
 
 const TIERRAS: Record<Modo, Record<number, number[]>> = {
   g: { 0: [1, 8, 9], 1: [0, 1, 2, 3, 4, 7, 8], 2: [0, 1, 2, 3, 4, 5, 6, 7], 3: [0, 1, 2, 3, 4, 5], 4: [1, 2, 3, 4, 6], 5: [1] },
@@ -23,6 +23,14 @@ const TIERRAS: Record<Modo, Record<number, number[]>> = {
   cg: { 0: [3, 4, 5], 1: [2, 3, 4, 5], 2: [2, 3, 4, 5, 6], 3: [1, 2, 3, 4, 5, 6], 4: [2, 3, 4, 5, 6], 5: [2, 3, 4, 5], 6: [3, 4, 5] },
 };
 export const COLOR: Record<string, string> = { wood: '#1f9d83', brick: '#e8607f', wool: '#a9d96a', grain: '#f2c23c', ore: '#8c93a0', desert: '#ead9a3' };
+
+export const SVG_ICONOS_RECURSO: Record<string, string> = {
+  wood: '<g stroke-width="1.5" stroke="#5a3b1e"><rect x="3" y="28" width="32" height="11" rx="5.5" fill="#8a5a2b"/><circle cx="33" cy="33.5" r="5.5" fill="#ecc88e"/><circle cx="33" cy="33.5" r="2.2" fill="none" stroke="#b98a4a"/><rect x="9" y="16" width="32" height="11" rx="5.5" fill="#a06a33"/><circle cx="39" cy="21.5" r="5.5" fill="#f3d9a6"/><circle cx="39" cy="21.5" r="2.2" fill="none" stroke="#b98a4a"/><rect x="5" y="5" width="30" height="10" rx="5" fill="#8a5a2b"/><circle cx="33" cy="10" r="5" fill="#ecc88e"/></g>',
+  brick: '<g stroke-width="1.5" stroke="#7a1f1a"><rect x="3" y="30" width="20" height="11" rx="2" fill="#d6453d"/><rect x="25" y="30" width="20" height="11" rx="2" fill="#c93a32"/><rect x="14" y="18" width="20" height="11" rx="2" fill="#e0574e"/><rect x="14" y="6" width="20" height="11" rx="2" fill="#d6453d"/><path d="M6 33h14M28 33h14M17 21h14M17 9h14" stroke="#f4a29b" stroke-width="1.5"/></g>',
+  wool: '<g><path d="M15 36v8M31 36v8" stroke="#3b2a14" stroke-width="3.5" stroke-linecap="round"/><g fill="#fffdf4" stroke="#b8c0a0" stroke-width="1.2"><circle cx="16" cy="24" r="10"/><circle cx="27" cy="21" r="10"/><circle cx="23" cy="31" r="9"/></g><ellipse cx="39" cy="26" rx="5.5" ry="6.5" fill="#3b2a14"/><circle cx="40" cy="24" r="1.3" fill="#fffdf4"/></g>',
+  grain: '<g><path d="M24 45V13" stroke="#9a7a1c" stroke-width="2.6" stroke-linecap="round"/><g fill="#f2c23c" stroke="#b98a14" stroke-width="1"><ellipse cx="24" cy="7" rx="3.6" ry="6"/><ellipse cx="17" cy="15" rx="3.6" ry="6.5" transform="rotate(-28 17 15)"/><ellipse cx="31" cy="15" rx="3.6" ry="6.5" transform="rotate(28 31 15)"/><ellipse cx="17" cy="26" rx="3.6" ry="6.5" transform="rotate(-28 17 26)"/><ellipse cx="31" cy="26" rx="3.6" ry="6.5" transform="rotate(28 31 26)"/><ellipse cx="18" cy="37" rx="3.6" ry="6" transform="rotate(-28 18 37)"/><ellipse cx="30" cy="37" rx="3.6" ry="6" transform="rotate(28 30 37)"/></g></g>',
+  ore: '<g><ellipse cx="24" cy="42" rx="14" ry="3.5" fill="#1d1f26"/><path d="M14 42L22 7M34 42L26 7" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M14 42L22 7M34 42L26 7" stroke="#4b5160" stroke-width="2.6" stroke-linecap="round" fill="none"/><path d="M17 33H31M19 24H29M20.5 15H27.5" stroke="#4b5160" stroke-width="1.6" fill="none"/><rect x="19" y="3" width="10" height="6" rx="1.5" fill="#4b5160" stroke="#ffffff" stroke-width="1.3"/><circle cx="24" cy="0" r="2.6" fill="#e8607f" stroke="#ffffff" stroke-width="0.8"/></g>',
+};
 const IN = 'M0 -42L36.4 -21V21L0 42L-36.4 21V-21Z';
 
 const f = (n: number) => n.toFixed(1);
