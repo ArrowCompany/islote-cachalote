@@ -441,7 +441,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
   useEffect(() => {
     if (animandoRoll.current) return;
-    if (Date.now() - ultimoCambioLocal.current < 2000) return;
+    if (Date.now() - ultimoCambioLocal.current < 4000) return;
     setManoMostrada(manoReal);
   }, [manoReal]);
 
@@ -857,6 +857,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const descartarYa = () => void intentar(() => descartarCartas(codigo, uid, numTurno, selDescarte), 'No pude descartar: revisa la cantidad');
   const comprarYa = () => {
     setConfirmarCarta(false);
+    ultimoCambioLocal.current = Date.now();
+    setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, ore: ((prev as any).ore ?? 0) - 1 }));
     void intentar(() => comprarDesarrollo(codigo, uid, numTurno), 'No pude comprar la carta');
   };
   const jugarYa = (c: CartaDes, param: ParamCarta) => {
