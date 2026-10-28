@@ -453,7 +453,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
   useEffect(() => {
     if (animandoRoll.current) return;
-    if (Date.now() - ultimoCambioLocal.current < 4000) return;
+    if (Date.now() - ultimoCambioLocal.current < 12000) return;
     setManoMostrada(manoReal);
   }, [manoReal]);
 
