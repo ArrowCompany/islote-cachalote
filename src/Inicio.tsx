@@ -281,6 +281,12 @@ export default function Inicio() {
           )}
           <h2>Configuración {esAnfitrion ? '' : '(la elige el anfitrión)'}</h2>
           <div className="opciones">
+            <span className="etq">Ranking</span>
+            <div className="grupo">
+              <button className={(cfg.cuentaRanking !== false) ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ cuentaRanking: true })}>✅ Esta partida SÍ entra al ranking</button>
+              <button className={(cfg.cuentaRanking === false) ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ cuentaRanking: false })}>❌ Esta partida NO entra al ranking</button>
+            </div>
+            <small>Si está desactivado, esta partida no sumará puntos al ranking global.</small>
             <span className="etq">Mapa</span>
             <div className="grupo">
               <button className={mapaElegido === 'cachalote' ? 'on' : ''} disabled={!esAnfitrion} onClick={() => cambiarCfg({ mapa: 'cachalote' })}>🐋 Mapa cachalote</button>
