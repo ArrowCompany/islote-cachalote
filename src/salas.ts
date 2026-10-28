@@ -20,7 +20,7 @@ export const COLORES: { id: string; nombre: string; hex: string }[] = [
   { id: 'naranja', nombre: 'Naranja', hex: '#f77f00' },
 ];
 
-export type Config = { mapa: 'cachalote' | 'catan'; chat: boolean; reloj: 40 | 60 | 90 };
+export type Config = { mapa: 'cachalote' | 'catan'; chat: boolean; reloj: 40 | 60 | 90; cuentaRanking?: boolean };
 export type Partida = { modo: Modo; semilla: number };
 export type Jugador = { nombre: string; color: string; listo: boolean; orden: number; conectado?: boolean; bot?: boolean };
 export type MensajeChat = { uid: string; nombre: string; texto: string; ts: number };
@@ -37,7 +37,7 @@ export type Sala = {
   chat?: Record<string, MensajeChat>;
 };
 
-export const CONFIG_INICIAL: Config = { mapa: 'cachalote', chat: true, reloj: 60 };
+export const CONFIG_INICIAL: Config = { mapa: 'cachalote', chat: true, reloj: 60, cuentaRanking: true };
 
 const esUidBot = (uid: string) => uid.startsWith('bot_');
 const esBotSala = (js: Record<string, Jugador>, uid: string) => esUidBot(uid) || !!js[uid]?.bot;
