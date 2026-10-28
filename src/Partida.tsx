@@ -189,9 +189,9 @@ async function volarCarta({ recurso, origen, destino, conSubida = true, reverso 
     const rectO2 = origEl.getBoundingClientRect();
     const rectD2 = destEl.getBoundingClientRect();
     const x0 = rectO2.left + rectO2.width / 2;
-    const y0 = rectO.top + rectO.height / 2;
-    const x1 = rectD.left + rectD.width / 2;
-    const y1 = rectD.top + rectD.height / 2;
+    const y0 = rectO2.top + rectO2.height / 2;
+    const x1 = rectD2.left + rectD2.width / 2;
+    const y1 = rectD2.top + rectD2.height / 2;
 
     const tipoRec = traducirRecurso(recurso);
     const bgColor = reverso ? '#8a2a2a' : (COLOR_FONDO_RECURSO[tipoRec] ?? '#f3e6c4');
