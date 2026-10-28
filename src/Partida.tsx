@@ -342,6 +342,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const manoReal = useMemo(() => ({ ...manoVacia(), ...(sala.manos?.[uid] ?? {}) }), [sala.manos, uid]);
   const [manoMostrada, setManoMostrada] = useState<Recursos>(manoReal);
   const animandoRoll = useRef(false);
+  const ultimoCambioLocal = useRef(0);
 
   useEffect(() => {
     if (tirada === tiradaVista.current) return;
@@ -439,9 +440,9 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   }, [tirada]);
 
   useEffect(() => {
-    if (!animandoRoll.current) {
-      setManoMostrada(manoReal);
-    }
+    if (animandoRoll.current) return;
+    if (Date.now() - ultimoCambioLocal.current < 2000) return;
+    setManoMostrada(manoReal);
   }, [manoReal]);
 
   useEffect(() => {
@@ -832,6 +833,9 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const hacerBanco = () => {
     if (!doy || !recibo) return;
     const d = doy, r = recibo;
+    ultimoCambioLocal.current = Date.now();
+    const tasa = tasas[d] ?? 4;
+    setManoMostrada((prev) => ({ ...prev, [d]: ((prev as any)[d] ?? 0) - tasa, [r]: ((prev as any)[r] ?? 0) + 1 }));
     void intentar(() => cambiarConBanco(codigo, uid, numTurno, d, r), 'No pude hacer el cambio con el banco');
   };
   const cambiarBloqueo = (v: boolean) => void intentar(() => bloquearCambios(codigo, uid, v), 'No pude cambiar el bloqueo');
@@ -866,6 +870,14 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const construirAqui = (id: string) => {
     const t = construyendo ?? (gratis ? 'camino' : null);
     if (!t) return;
+    ultimoCambioLocal.current = Date.now();
+    if (t === 'camino') {
+      setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
+    } else if (t === 'poblado') {
+      setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
+    } else if (t === 'ciudad') {
+      setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 2, ore: ((prev as any).ore ?? 0) - 3 }));
+    }
     setConstruyendo(null);
     void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
   };
