@@ -159,20 +159,35 @@ async function volarCarta({ recurso, origen, destino, conSubida = true, reverso 
   try {
     const capa = obtenerCapa();
 
+    let origEl = origen;
+    if (!origEl && prod) {
+      origEl = (document.querySelector('[data-mesa-jugador="' + prod.uid + '"]') as HTMLElement | null) ||
+               (document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null) ||
+               (document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null) ||
+               (document.querySelector('[data-mano="' + prod.uid + '"]') as HTMLElement | null);
+    }
+
     let destEl = destino;
     if (!destEl && prod) {
-      destEl = (document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null) ||
+      destEl = (document.querySelector('[data-mesa-jugador="' + prod.uid + '"]') as HTMLElement | null) ||
+               (document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null) ||
                (document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null) ||
                (document.querySelector('[data-mano="' + prod.uid + '"]') as HTMLElement | null);
     }
     destEl = destEl || document.body;
+    origEl = origEl || document.body;
 
-    console.log('ORIGEN/DESTINO', origen, destEl, origen?.getBoundingClientRect(), destEl?.getBoundingClientRect());
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    if (!origen || !destEl) {
-      console.warn('volarCarta cancelada', { origen, destino: destEl, prod });
+    console.log('ORIGEN/DESTINO', origEl, destEl, origEl?.getBoundingClientRect(), destEl?.getBoundingClientRect());
+
+    if (!origEl || !destEl) {
+      console.warn('volarCarta cancelada', { origen: origEl, destino: destEl, prod });
       return;
     }
+
+    const o = origEl.getBoundingClientRect();
+    const d = destEl.getBoundingClientRect();
 
     const o = origen.getBoundingClientRect();
     const d = destEl.getBoundingClientRect();
@@ -518,8 +533,14 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     }
 
     if (thief && victim && recursoRobado && thief !== victim) {
-      const origenEl = document.querySelector('[data-jugador="' + victim + '"][data-recurso="' + recursoRobado + '"]') || document.querySelector('[data-mano="' + victim + '"]');
-      const destinoEl = document.querySelector('[data-jugador="' + thief + '"][data-recurso="' + recursoRobado + '"]') || document.querySelector('[data-jugador="' + thief + '"]') || document.querySelector('[data-mano="' + thief + '"]');
+      const origenEl = (document.querySelector('[data-mesa-jugador="' + victim + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-jugador="' + victim + '"][data-recurso="' + recursoRobado + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-jugador="' + victim + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-mano="' + victim + '"]') as HTMLElement | null);
+      const destinoEl = (document.querySelector('[data-mesa-jugador="' + thief + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-jugador="' + thief + '"][data-recurso="' + recursoRobado + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-jugador="' + thief + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-mano="' + thief + '"]') as HTMLElement | null);
 
       if (victim === uid) {
         setManoMostrada((prevM) => ({
@@ -529,6 +550,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
       }
 
       void (async () => {
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
         await volarCarta({
           recurso: recursoRobado!,
           origen: origenEl as HTMLElement,

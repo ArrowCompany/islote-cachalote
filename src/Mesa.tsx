@@ -1,4 +1,4 @@
-import { COLOR } from './tablero';
+import { COLOR, SVG_ICONOS_RECURSO } from './tablero';
 import { COSTO, COSTO_CARTA, LIMITE, RECURSOS, contarPiezas } from './reglas';
 import type { EstadoJuego, Recursos } from './reglas';
 import { FormaCiudad, FormaPoblado, listones } from './piezas';
@@ -18,9 +18,15 @@ function Fichas({ c, x, y }: { c: Partial<Recursos>; x: number; y: number }) {
   return (
     <g>
       {lista.map((r, i) => (
-        <g key={r} transform={`translate(${x + i * 30} ${y})`}>
-          <circle r={12} fill={COLOR[r]} stroke="#ffffff" strokeWidth={2} />
-          <text y={5} textAnchor="middle" fontSize={14} fontWeight={700} fill="#1b1b1b">{c[r]}</text>
+        <g key={r} transform={`translate(${x + i * 36} ${y - 14}) scale(0.6)`}>
+          <rect width={48} height={48} rx={8} fill={COLOR[r]} stroke="#ffffff" strokeWidth={2} />
+          <g dangerouslySetInnerHTML={{ __html: SVG_ICONOS_RECURSO[r] ?? '' }} />
+          {c[r]! > 1 && (
+            <g transform="translate(36 36)">
+              <circle r={10} fill="#1b1b1b" stroke="#ffffff" strokeWidth={1.5} />
+              <text y={4} textAnchor="middle" fontSize={12} fontWeight={700} fill="#ffffff">{c[r]}</text>
+            </g>
+          )}
         </g>
       ))}
     </g>
@@ -45,7 +51,7 @@ export default function Mesa({ jugadores, juego }: { jugadores: JugadorMesa[]; j
         const c = contarPiezas(juego, p.uid);
         const resto = { camino: LIMITE.camino - c.camino, poblado: LIMITE.poblado - c.poblado, ciudad: LIMITE.ciudad - c.ciudad };
         return (
-          <g key={p.uid} data-jugador={p.uid} transform={`translate(${pos[0]} ${pos[1]})`}>
+          <g key={p.uid} data-jugador={p.uid} data-mesa-jugador={p.uid} transform={`translate(${pos[0]} ${pos[1]})`}>
             <rect x={-10} y={-10} width={312} height={178} rx={14} fill="rgba(0,0,0,0.25)" />
             <circle cx={10} cy={12} r={9} fill={p.hex} stroke="#ffffff" strokeWidth={2.5} />
             <text x={28} y={20} fontSize={22} fontWeight={700} fill="#ffffff">{p.nombre}</text>
