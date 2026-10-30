@@ -20,7 +20,7 @@ import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones } 
 import './partida.css';
 
 type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void; onActualizar?: (s: Sala) => void };
-type Panel = 'ninguno' | 'jugadores' | 'chat' | 'cartas';
+type Panel = 'ninguno' | 'jugadores' | 'chat' | 'cartas' | 'historial';
 type Pestana = 'jugadores' | 'banco';
 
 const PUNTOS: Record<number, number[]> = {
@@ -92,6 +92,15 @@ function IconoChat() {
       <circle cx="10" cy="14" r="2" fill="#333333" />
       <circle cx="16" cy="14" r="2" fill="#333333" />
       <circle cx="22" cy="14" r="2" fill="#333333" />
+    </svg>
+  );
+}
+
+function IconoHistorial() {
+  return (
+    <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+      <circle cx="16" cy="16" r="12" fill="none" stroke="#ffffff" strokeWidth="2.5" />
+      <path d="M16 8v8l5 3" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" fill="none" />
     </svg>
   );
 }
@@ -1157,6 +1166,9 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
               <IconoChat />
             </button>
           )}
+          <button className={panel === 'historial' ? 'sq on' : 'sq'} onClick={() => alternar('historial')} aria-label="Historial">
+            <IconoHistorial />
+          </button>
           <button className={panel === 'jugadores' ? 'sq on' : 'sq'} onClick={() => alternar('jugadores')} aria-label="Jugadores">
             <IconoJugadores />
           </button>
@@ -1529,6 +1541,16 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
               <input name="msg" type="text" placeholder="Mensaje..." maxLength={200} />
               <button type="submit">Enviar</button>
             </form>
+          </div>
+        )}
+        {panel === 'historial' && (
+          <div className="panel panel-chat" style={{ maxHeight: '60vh', overflow: 'auto' }}>
+            <h3>Historial de la partida</h3>
+            <div className="chat-mensajes">
+              {[].map((entry: any, i) => (
+                <div key={i} className="chat-msg">• {entry}</div>
+              ))}
+            </div>
           </div>
         )}
       </div>

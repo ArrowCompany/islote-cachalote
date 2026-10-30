@@ -202,7 +202,7 @@ export default function Inicio() {
         </div>
       );
     }
-    return <Partida sala={sala} uid={uid} codigo={codigo} onSalir={salirDePartida} />;
+    return <Partida sala={sala} uid={uid} codigo={codigo} onSalir={salirDePartida} onActualizar={setSala} />;
   }
 
   if (pantalla === 'sala') {
