@@ -454,14 +454,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     };
   }, [tirada]);
 
-  const preAccionMano = useRef<Recursos | null>(null);
-
   useEffect(() => {
-    if (animandoRoll.current) return;
-    if (preAccionMano.current && RECURSOS.every((r) => (manoReal[r] ?? 0) === (preAccionMano.current![r] ?? 0))) {
-      return; // aún no llega la actualización del servidor: no pisar el valor optimista
-    }
-    preAccionMano.current = null;
     setManoMostrada(manoReal);
   }, [manoReal]);
 
@@ -871,12 +864,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         const snap = await get(ref(db, 'salas/' + codigo));
         if (snap.exists()) {
           onActualizar(snap.val() as Sala);
-          preAccionMano.current = null;
         }
       }
     } catch {
       setError(mensaje);
-      preAccionMano.current = null;
       setManoMostrada(manoReal);
     }
   };
@@ -902,7 +893,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const quitarOferta = () => (oferta ? intentar(() => cancelarCambio(codigo, uid, oferta.id), 'No pude cancelar la oferta') : Promise.resolve());
   const aceptarOferta = () => {
     if (!ofertaEntrante) return;
-    preAccionMano.current = manoReal;
     setManoMostrada((prev) => {
       const n = { ...prev };
       RECURSOS.forEach((r) => {
@@ -915,7 +905,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const rechazarOferta = () => (ofertaEntrante ? intentar(() => rechazarCambio(codigo, uid, ofertaEntrante.id), 'No pude rechazar la oferta') : Promise.resolve());
   const hacerBanco = () => {
     if (!doy || !recibo) return;
-    preAccionMano.current = manoReal;
     const d = doy, r = recibo;
     ultimoCambioLocal.current = Date.now();
     const tasa = tasas[d] ?? 4;
@@ -939,12 +928,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const moverCachalote = (clave: string) => void intentar(() => mandarLadron(codigo, uid, numTurno, clave), 'No pude mover al cachalote, intenta otra vez');
   const robarAlguien = (v: string) => void intentar(() => robarCartaA(codigo, uid, numTurno, v), 'No pude robar, intenta otra vez');
   const descartarYa = () => {
-    preAccionMano.current = manoReal;
     void intentar(() => descartarCartas(codigo, uid, numTurno, selDescarte), 'No pude descartar: revisa la cantidad');
   };
   const comprarYa = () => {
     setConfirmarCarta(false);
-    preAccionMano.current = manoReal;
     ultimoCambioLocal.current = Date.now();
     setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, ore: ((prev as any).ore ?? 0) - 1 }));
     void intentar(() => comprarDesarrollo(codigo, uid, numTurno), 'No pude comprar la carta');
@@ -965,7 +952,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const construirAqui = (id: string) => {
     const t = construyendo ?? (gratis ? 'camino' : null);
     if (!t) return;
-    preAccionMano.current = manoReal;
     ultimoCambioLocal.current = Date.now();
     if (t === 'camino') {
       setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
@@ -986,7 +972,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       if (miTurnoColocar) void poner(id);
       else {
         setConstruyendo(null);
-        preAccionMano.current = manoReal;
         setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
         void intentar(() => construirPieza(codigo, uid, numTurno, 'poblado', id), 'No pude construir, intenta otra vez');
       }
@@ -995,7 +980,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       else {
         setConstruyendo(null);
         const t = construyendo ?? (gratis ? 'camino' : null);
-        preAccionMano.current = manoReal;
         if (t === 'camino') setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
         else if (t === 'poblado') setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
         else if (t === 'ciudad') setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 2, ore: ((prev as any).ore ?? 0) - 3 }));
