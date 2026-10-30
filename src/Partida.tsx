@@ -515,6 +515,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const prevManosRef = useRef(sala.manos ?? {});
   useEffect(() => {
     if (!sala.manos || !juego) return;
+    if (juego.fase !== 'mover' && juego.fase !== 'robar') {
+      prevManosRef.current = sala.manos;
+      return;
+    }
     const prev = prevManosRef.current;
     const curr = sala.manos;
 
@@ -586,6 +590,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const prevManosDescRef = useRef(sala.manos ?? {});
   useEffect(() => {
     if (!sala.manos || !juego) return;
+    if (juego.fase !== 'descartar') {
+      prevManosDescRef.current = sala.manos;
+      return;
+    }
     const prev = prevManosDescRef.current;
     const curr = sala.manos;
 
