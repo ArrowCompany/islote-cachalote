@@ -906,9 +906,31 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const hacerBanco = () => {
     if (!doy || !recibo) return;
     const d = doy, r = recibo;
-    ultimoCambioLocal.current = Date.now();
     const tasa = tasas[d] ?? 4;
+    ultimoCambioLocal.current = Date.now();
     setManoMostrada((prev) => ({ ...prev, [d]: ((prev as any)[d] ?? 0) - tasa, [r]: ((prev as any)[r] ?? 0) + 1 }));
+
+    // Animación: tasa cartas vuelan del mazo del jugador al banco (todas a la vez, con pequeño escalon).
+    const origenEl = document.querySelector('[data-mano="' + uid + '"]') as HTMLElement | null;
+    const dummy = document.createElement('div');
+    dummy.style.cssText = 'position:fixed;left:50%;top:60px;width:1px;height:1px;pointer-events:none;';
+    document.body.appendChild(dummy);
+    void (async () => {
+      const tareas = Array.from({ length: tasa }).map((_, idx) => async () => {
+        await new Promise((res) => setTimeout(res, idx * 80));
+        await volarCarta({
+          recurso: d,
+          origen: origenEl,
+          destino: dummy,
+          conSubida: true,
+          reverso: false,
+          prod: { uid, recurso: d },
+        });
+      });
+      await Promise.all(tareas.map((t) => t()));
+      dummy.remove();
+    })();
+
     void intentar(() => cambiarConBanco(codigo, uid, numTurno, d, r), 'No pude hacer el cambio con el banco');
   };
   const cambiarBloqueo = (v: boolean) => void intentar(() => bloquearCambios(codigo, uid, v), 'No pude cambiar el bloqueo');
