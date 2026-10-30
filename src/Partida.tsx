@@ -539,10 +539,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                         (document.querySelector('[data-jugador="' + victim + '"][data-recurso="' + recursoRobado + '"]') as HTMLElement | null) ||
                         (document.querySelector('[data-jugador="' + victim + '"]') as HTMLElement | null) ||
                         (document.querySelector('[data-mano="' + victim + '"]') as HTMLElement | null);
-      const destinoEl = (document.querySelector('[data-mesa-jugador="' + thief + '"]') as HTMLElement | null) ||
+      const destinoEl = (document.querySelector('[data-mano="' + thief + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-mesa-jugador="' + thief + '"]') as HTMLElement | null) ||
                         (document.querySelector('[data-jugador="' + thief + '"][data-recurso="' + recursoRobado + '"]') as HTMLElement | null) ||
-                        (document.querySelector('[data-jugador="' + thief + '"]') as HTMLElement | null) ||
-                        (document.querySelector('[data-mano="' + thief + '"]') as HTMLElement | null);
+                        (document.querySelector('[data-jugador="' + thief + '"]') as HTMLElement | null);
 
       if (victim === uid) {
         setManoMostrada((prevM) => ({
