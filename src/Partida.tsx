@@ -641,14 +641,25 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     prevManosDescRef.current = curr;
   }, [sala.manos, juego, uid]);
 
+  const conocidosPoblados = useRef<Set<string>>(new Set(Object.keys(juego?.poblados ?? {})));
   const prevPobladosLen = useRef(Object.keys(juego?.poblados ?? {}).length);
   useEffect(() => {
     if (!juego || !geo || !partida) return;
-    const currLen = Object.keys(juego.poblados).length;
-    if (currLen > prevPobladosLen.current && juego.fase === 'colocacion' && juego.paso >= juego.orden.length) {
-      const allVerts = Object.entries(juego.poblados);
-      const [nuevoVertice, nuevaPieza] = allVerts[allVerts.length - 1] ?? [];
-      if (nuevoVertice && nuevaPieza) {
+    const currVerts = Object.keys(juego.poblados);
+    const nuevos = currVerts.filter((v) => !conocidosPoblados.current.has(v));
+    // actualizar conocidos
+    currVerts.forEach((v) => conocidosPoblados.current.add(v));
+    if (nuevos.length !== 1) {
+      prevPobladosLen.current = currVerts.length;
+      return;
+    }
+    if (!(juego.fase === 'colocacion' && juego.paso >= juego.orden.length)) {
+      prevPobladosLen.current = currVerts.length;
+      return;
+    }
+    const nuevoVertice = nuevos[0];
+    const nuevaPieza = juego.poblados[nuevoVertice];
+    if (!nuevaPieza) { prevPobladosLen.current = currVerts.length; return; }
         const mapa = mapaDe(partida.modo, partida.semilla);
         const vert = geo.vertices[nuevoVertice];
         if (vert && vert.hexes) {
@@ -693,9 +704,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
             })();
           }
         }
-      }
-    }
-    prevPobladosLen.current = currLen;
+    prevPobladosLen.current = currVerts.length;
   }, [juego?.poblados, juego?.fase, juego?.paso, geo, partida, uid]);
 
   useEffect(() => {
