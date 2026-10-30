@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { get, ref } from 'firebase/database';
+import { db } from './firebase';
 import { COLORES, actualizarRegistroMaquina, actualizarRanking } from './salas';
 import type { Sala } from './salas';
 import { esBotJugador, caminoInicial, decidirAccion, elegirDescarte, elegirHexLadron, elegirVictima, manoDeBot, pobladoInicial } from './bots';
@@ -17,7 +19,7 @@ import Mesa from './Mesa';
 import { Cantidades, Carta, FormaCiudad, FormaPoblado, IconoRecurso, listones } from './piezas';
 import './partida.css';
 
-type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void };
+type Props = { sala: Sala; uid: string; codigo: string; onSalir: () => void; onActualizar?: (s: Sala) => void };
 type Panel = 'ninguno' | 'jugadores' | 'chat' | 'cartas';
 type Pestana = 'jugadores' | 'banco';
 
@@ -258,7 +260,7 @@ async function pulsoHexagonos(hexIds: string[]) {
 }
 
 
-export default function Partida({ sala, uid, codigo, onSalir }: Props) {
+export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Props) {
   const partida = sala.partida;
   const juego = useMemo(() => (sala.juego ? completar(sala.juego) : null), [sala.juego]);
   const modo = partida?.modo;
@@ -855,6 +857,14 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
     setError('');
     try {
       await accion();
+      // Forzar relectura inmediata para reflejar el nuevo estado (útil en móvil).
+      if (onActualizar) {
+        const snap = await get(ref(db, 'salas/' + codigo));
+        if (snap.exists()) {
+          onActualizar(snap.val() as Sala);
+          preAccionMano.current = null;
+        }
+      }
     } catch {
       setError(mensaje);
       preAccionMano.current = null;
