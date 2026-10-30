@@ -448,12 +448,18 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
 
     return () => {
       window.clearInterval(intervalo);
+      animandoRoll.current = false;
     };
   }, [tirada]);
 
+  const preAccionMano = useRef<Recursos | null>(null);
+
   useEffect(() => {
     if (animandoRoll.current) return;
-    if (Date.now() - ultimoCambioLocal.current < 12000) return;
+    if (preAccionMano.current && RECURSOS.every((r) => (manoReal[r] ?? 0) === (preAccionMano.current![r] ?? 0))) {
+      return; // aún no llega la actualización del servidor: no pisar el valor optimista
+    }
+    preAccionMano.current = null;
     setManoMostrada(manoReal);
   }, [manoReal]);
 
@@ -540,30 +546,34 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
                         (document.querySelector('[data-mano="' + thief + '"]') as HTMLElement | null);
 
       if (victim === uid) {
-        ultimoCambioLocal.current = Date.now();
         setManoMostrada((prevM) => ({
           ...prevM,
           [recursoRobado!]: Math.max(0, (prevM[recursoRobado!] ?? 0) - 1),
         }));
       }
 
+      animandoRoll.current = true;
       void (async () => {
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-        await volarCarta({
-          recurso: recursoRobado!,
-          origen: origenEl as HTMLElement,
-          destino: destinoEl as HTMLElement,
-          conSubida: false,
-          reverso: thief !== uid,
-          prod: { uid: thief, recurso: recursoRobado! }
-        });
+        try {
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          await volarCarta({
+            recurso: recursoRobado!,
+            origen: origenEl as HTMLElement,
+            destino: destinoEl as HTMLElement,
+            conSubida: false,
+            reverso: thief !== uid,
+            prod: { uid: thief, recurso: recursoRobado! }
+          });
 
-        if (thief === uid) {
-          ultimoCambioLocal.current = Date.now();
-          setManoMostrada((prevM) => ({
-            ...prevM,
-            [recursoRobado!]: (prevM[recursoRobado!] ?? 0) + 1,
-          }));
+          if (thief === uid) {
+            setManoMostrada((prevM) => ({
+              ...prevM,
+              [recursoRobado!]: (prevM[recursoRobado!] ?? 0) + 1,
+            }));
+          }
+        } finally {
+          animandoRoll.current = false;
+          setManoMostrada(manoReal);
         }
       })();
     }
@@ -592,21 +602,26 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
               const origenEl = document.querySelector('[data-jugador="' + id + '"][data-recurso="' + r + '"]') || document.querySelector('[data-mano="' + id + '"]');
 
               if (id === uid) {
-                ultimoCambioLocal.current = Date.now();
                 setManoMostrada((prevM) => ({
                   ...prevM,
                   [r]: Math.max(0, (prevM[r] ?? 0) - 1),
                 }));
               }
 
-              await volarCarta({
-                recurso: r,
-                origen: origenEl as HTMLElement,
-                destino: ladronEl as HTMLElement,
-                conSubida: true,
-                reverso: id !== uid,
-                prod: { uid: id, recurso: r }
-              });
+              animandoRoll.current = true;
+              try {
+                await volarCarta({
+                  recurso: r,
+                  origen: origenEl as HTMLElement,
+                  destino: ladronEl as HTMLElement,
+                  conSubida: true,
+                  reverso: id !== uid,
+                  prod: { uid: id, recurso: r }
+                });
+              } finally {
+                animandoRoll.current = false;
+                setManoMostrada(manoReal);
+              }
             }
           })();
         }
@@ -634,31 +649,37 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
           if (hexesAdyacentes.length > 0) {
             const hexIds = hexesAdyacentes.map((h) => h.r + ',' + h.c);
             void (async () => {
-              await pulsoHexagonos(hexIds);
-              const tareas = hexesAdyacentes.map((h, idx) => async () => {
-                await new Promise((r) => setTimeout(r, idx * DURACIONES.escalon));
-                const hexEl = document.querySelector('[data-hex="' + h.r + ',' + h.c + '"]') as HTMLElement | null;
-                const destEl = (nuevaPieza.uid === uid)
-                  ? document.querySelector('[data-jugador="' + uid + '"][data-recurso="' + h.tipo + '"]') as HTMLElement | null
-                  : document.querySelector('[data-jugador="' + nuevaPieza.uid + '"]') as HTMLElement | null;
+              animandoRoll.current = true;
+              try {
+                await pulsoHexagonos(hexIds);
+                const tareas = hexesAdyacentes.map((h, idx) => async () => {
+                  await new Promise((r) => setTimeout(r, idx * DURACIONES.escalon));
+                  const hexEl = document.querySelector('[data-hex="' + h.r + ',' + h.c + '"]') as HTMLElement | null;
+                  const destEl = (nuevaPieza.uid === uid)
+                    ? document.querySelector('[data-jugador="' + uid + '"][data-recurso="' + h.tipo + '"]') as HTMLElement | null
+                    : document.querySelector('[data-jugador="' + nuevaPieza.uid + '"]') as HTMLElement | null;
 
-                await volarCarta({
-                  recurso: h.tipo,
-                  origen: hexEl,
-                  destino: destEl,
-                  conSubida: true,
-                  reverso: nuevaPieza.uid !== uid,
-                  prod: { uid: nuevaPieza.uid, recurso: h.tipo }
+                  await volarCarta({
+                    recurso: h.tipo,
+                    origen: hexEl,
+                    destino: destEl,
+                    conSubida: true,
+                    reverso: nuevaPieza.uid !== uid,
+                    prod: { uid: nuevaPieza.uid, recurso: h.tipo }
+                  });
+
+                  if (nuevaPieza.uid === uid) {
+                    setManoMostrada((prev) => ({
+                      ...prev,
+                      [h.tipo as Recurso]: ((prev as any)[h.tipo] ?? 0) + 1,
+                    }));
+                  }
                 });
-
-                if (nuevaPieza.uid === uid) {
-                  setManoMostrada((prev) => ({
-                    ...prev,
-                    [h.tipo as Recurso]: ((prev as any)[h.tipo] ?? 0) + 1,
-                  }));
-                }
-              });
-              await Promise.all(tareas.map((t) => t()));
+                await Promise.all(tareas.map((t) => t()));
+              } finally {
+                animandoRoll.current = false;
+                setManoMostrada(manoReal);
+              }
             })();
           }
         }
@@ -828,6 +849,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
       await accion();
     } catch {
       setError(mensaje);
+      preAccionMano.current = null;
+      setManoMostrada(manoReal);
     }
   };
   const lanzarOrden = () => intentar(() => lanzarDadosOrden(codigo, uid, numTurno), 'No pude lanzar los dados, intenta otra vez');
@@ -850,10 +873,22 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const alcanzaOferta = ofertaEntrante ? RECURSOS.every((r) => mano[r] >= (ofertaEntrante.pide[r] ?? 0)) : false;
   const enviarOferta = () => intentar(() => proponerCambio(codigo, uid, numTurno, ofDa, ofPide), 'No pude enviar la oferta, intenta otra vez');
   const quitarOferta = () => (oferta ? intentar(() => cancelarCambio(codigo, uid, oferta.id), 'No pude cancelar la oferta') : Promise.resolve());
-  const aceptarOferta = () => (ofertaEntrante ? intentar(() => aceptarCambio(codigo, uid, ofertaEntrante.id), 'No pude aceptar: revisa que tengas las cartas') : Promise.resolve());
+  const aceptarOferta = () => {
+    if (!ofertaEntrante) return;
+    preAccionMano.current = manoReal;
+    setManoMostrada((prev) => {
+      const n = { ...prev };
+      RECURSOS.forEach((r) => {
+        n[r] = (n[r] ?? 0) + (ofertaEntrante.da[r] ?? 0) - (ofertaEntrante.pide[r] ?? 0);
+      });
+      return n;
+    });
+    return void intentar(() => aceptarCambio(codigo, uid, ofertaEntrante.id), 'No pude aceptar: revisa que tengas las cartas');
+  };
   const rechazarOferta = () => (ofertaEntrante ? intentar(() => rechazarCambio(codigo, uid, ofertaEntrante.id), 'No pude rechazar la oferta') : Promise.resolve());
   const hacerBanco = () => {
     if (!doy || !recibo) return;
+    preAccionMano.current = manoReal;
     const d = doy, r = recibo;
     ultimoCambioLocal.current = Date.now();
     const tasa = tasas[d] ?? 4;
@@ -876,9 +911,13 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const hexesMover = enMover && soyActual ? mapa.hexes.filter((h) => h.r + ',' + h.c !== juego.ladron) : [];
   const moverCachalote = (clave: string) => void intentar(() => mandarLadron(codigo, uid, numTurno, clave), 'No pude mover al cachalote, intenta otra vez');
   const robarAlguien = (v: string) => void intentar(() => robarCartaA(codigo, uid, numTurno, v), 'No pude robar, intenta otra vez');
-  const descartarYa = () => void intentar(() => descartarCartas(codigo, uid, numTurno, selDescarte), 'No pude descartar: revisa la cantidad');
+  const descartarYa = () => {
+    preAccionMano.current = manoReal;
+    void intentar(() => descartarCartas(codigo, uid, numTurno, selDescarte), 'No pude descartar: revisa la cantidad');
+  };
   const comprarYa = () => {
     setConfirmarCarta(false);
+    preAccionMano.current = manoReal;
     ultimoCambioLocal.current = Date.now();
     setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, ore: ((prev as any).ore ?? 0) - 1 }));
     void intentar(() => comprarDesarrollo(codigo, uid, numTurno), 'No pude comprar la carta');
@@ -899,6 +938,7 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
   const construirAqui = (id: string) => {
     const t = construyendo ?? (gratis ? 'camino' : null);
     if (!t) return;
+    preAccionMano.current = manoReal;
     ultimoCambioLocal.current = Date.now();
     if (t === 'camino') {
       setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
@@ -919,6 +959,8 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
       if (miTurnoColocar) void poner(id);
       else {
         setConstruyendo(null);
+        preAccionMano.current = manoReal;
+        setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
         void intentar(() => construirPieza(codigo, uid, numTurno, 'poblado', id), 'No pude construir, intenta otra vez');
       }
     } else if (tipo === 'camino') {
@@ -926,6 +968,10 @@ export default function Partida({ sala, uid, codigo, onSalir }: Props) {
       else {
         setConstruyendo(null);
         const t = construyendo ?? (gratis ? 'camino' : null);
+        preAccionMano.current = manoReal;
+        if (t === 'camino') setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
+        else if (t === 'poblado') setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
+        else if (t === 'ciudad') setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 2, ore: ((prev as any).ore ?? 0) - 3 }));
         if (t) void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
       }
     }
