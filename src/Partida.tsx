@@ -364,6 +364,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const control3dRef = useRef<Control3D | null>(null);
   const manoReal = useMemo(() => ({ ...manoVacia(), ...(sala.manos?.[uid] ?? {}) }), [sala.manos, uid]);
   const [manoMostrada, setManoMostrada] = useState<Recursos>(manoReal);
+  const [animandoCount, setAnimandoCount] = useState(0);
   const animandoRoll = useRef(false);
   const ultimoCambioLocal = useRef(0);
 
@@ -379,80 +380,85 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     control3dRef.current?.dados(dadosFinVal, () => {});
 
     const run = async () => {
-      // 1. Dados ruedan (2s)
-      await new Promise((r) => window.setTimeout(r, 2000));
-      window.clearInterval(intervalo);
-      setRodando(false);
+      setAnimandoCount((c) => c + 1);
+      try {
+        // 1. Dados ruedan (2s)
+        await new Promise((r) => window.setTimeout(r, 2000));
+        window.clearInterval(intervalo);
+        setRodando(false);
 
-      const suma = dadosFinVal[0] + dadosFinVal[1];
-      if (suma === 7 || !juego || !geo || !partida) {
-        setManoMostrada(manoReal);
-        setBloqueadoAnim(false);
-        animandoRoll.current = false;
-        return;
-      }
-
-      const mapa = mapaDe(partida.modo, partida.semilla);
-      const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
-
-      // 2. Calcular producción (sin aplicar)
-      const producciones: { hex: string; recurso: string; uid: string }[] = [];
-      const hexesProductores = new Set<string>();
-      sumas.forEach((sm) => {
-        mapa.hexes.forEach((h) => {
-          if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') return;
-          const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
-          vertices.forEach(([vid]) => {
-            const pieza = juego.poblados[vid];
-            if (!pieza) return;
-            const n = pieza.tipo === 'ciudad' ? 2 : 1;
-            for (let i = 0; i < n; i++) {
-              producciones.push({ hex: h.r + ',' + h.c, recurso: h.tipo, uid: pieza.uid });
-              hexesProductores.add(h.r + ',' + h.c);
-            }
-          });
-        });
-      });
-
-      console.log('PRODUCCION', producciones);
-
-      if (producciones.length === 0) {
-        setManoMostrada(manoReal);
-        setBloqueadoAnim(false);
-        animandoRoll.current = false;
-        return;
-      }
-
-      // 3. Pulso en hexágonos (ripple) ~600ms
-      await pulsoHexagonos(Array.from(hexesProductores));
-
-      // 4-6. Por cada producción: carta emerge, pausa, vuela, y al llegar suma +1
-      const tareas = producciones.map((prod, idx) => async () => {
-        await new Promise((r) => setTimeout(r, idx * DURACIONES.escalon));
-        const hexEl = document.querySelector('[data-hex="' + prod.hex + '"]') as HTMLElement | null;
-        const destEl = (prod.uid === uid)
-          ? document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null
-          : document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null;
-        await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true, prod });
-
-        if (prod.uid === uid) {
-          setManoMostrada((prev) => ({
-            ...prev,
-            [prod.recurso as Recurso]: ((prev as any)[prod.recurso] ?? 0) + 1,
-          }));
+        const suma = dadosFinVal[0] + dadosFinVal[1];
+        if (suma === 7 || !juego || !geo || !partida) {
+          setManoMostrada(manoReal);
+          setBloqueadoAnim(false);
+          animandoRoll.current = false;
+          return;
         }
 
-        // Al llegar: suma +1 con pop
-        setPopRecurso(prod.recurso);
-        window.setTimeout(() => setPopRecurso(null), 400);
-      });
+        const mapa = mapaDe(partida.modo, partida.semilla);
+        const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
 
-      await Promise.all(tareas.map((t) => t()));
+        // 2. Calcular producción (sin aplicar)
+        const producciones: { hex: string; recurso: string; uid: string }[] = [];
+        const hexesProductores = new Set<string>();
+        sumas.forEach((sm) => {
+          mapa.hexes.forEach((h) => {
+            if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') return;
+            const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
+            vertices.forEach(([vid]) => {
+              const pieza = juego.poblados[vid];
+              if (!pieza) return;
+              const n = pieza.tipo === 'ciudad' ? 2 : 1;
+              for (let i = 0; i < n; i++) {
+                producciones.push({ hex: h.r + ',' + h.c, recurso: h.tipo, uid: pieza.uid });
+                hexesProductores.add(h.r + ',' + h.c);
+              }
+            });
+          });
+        });
 
-      // 7. Actualizar contadores
-      setManoMostrada(manoReal);
-      setBloqueadoAnim(false);
-      animandoRoll.current = false;
+        console.log('PRODUCCION', producciones);
+
+        if (producciones.length === 0) {
+          setManoMostrada(manoReal);
+          setBloqueadoAnim(false);
+          animandoRoll.current = false;
+          return;
+        }
+
+        // 3. Pulso en hexágonos (ripple) ~600ms
+        await pulsoHexagonos(Array.from(hexesProductores));
+
+        // 4-6. Por cada producción: carta emerge, pausa, vuela, y al llegar suma +1
+        const tareas = producciones.map((prod, idx) => async () => {
+          await new Promise((r) => setTimeout(r, idx * DURACIONES.escalon));
+          const hexEl = document.querySelector('[data-hex="' + prod.hex + '"]') as HTMLElement | null;
+          const destEl = (prod.uid === uid)
+            ? document.querySelector('[data-jugador="' + prod.uid + '"][data-recurso="' + prod.recurso + '"]') as HTMLElement | null
+            : document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null;
+          await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true, prod });
+
+          if (prod.uid === uid) {
+            setManoMostrada((prev) => ({
+              ...prev,
+              [prod.recurso as Recurso]: ((prev as any)[prod.recurso] ?? 0) + 1,
+            }));
+          }
+
+          // Al llegar: suma +1 con pop
+          setPopRecurso(prod.recurso);
+          window.setTimeout(() => setPopRecurso(null), 400);
+        });
+
+        await Promise.all(tareas.map((t) => t()));
+
+        // 7. Actualizar contadores
+        setManoMostrada(manoReal);
+        setBloqueadoAnim(false);
+        animandoRoll.current = false;
+      } finally {
+        setAnimandoCount((c) => Math.max(0, c - 1));
+      }
     };
 
     run();
@@ -464,9 +470,11 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   }, [tirada]);
 
   useEffect(() => {
-    if (Date.now() - ultimoCambioLocal.current < 2500) return;
-    setManoMostrada(manoReal);
-  }, [manoReal]);
+    console.log('SYNC', manoReal, manoMostrada, animandoCount);
+    if (animandoCount === 0) {
+      setManoMostrada(manoReal);
+    }
+  }, [manoReal, animandoCount]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
@@ -980,7 +988,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     void intentar(() => usarCarta(codigo, uid, numTurno, c.id, param), 'No pude jugar la carta');
   };
   const puedeJugar = (c: CartaDes) => soyActual && (juego.fase === 'tirar' || juego.fase === 'accion') && !juego.jugoCarta && c.tipo !== 'punto' && c.turno < juego.rondaTurno;
-  const alcanzaCarta = RECURSOS.every((r) => mano[r] >= (COSTO_CARTA[r] ?? 0)) && juego.mazo.length > 0;
+  const alcanzaCarta = RECURSOS.every((r) => manoReal[r] >= (COSTO_CARTA[r] ?? 0)) && juego.mazo.length > 0;
   const construirAqui = (id: string) => {
     const t = construyendo ?? (gratis ? 'camino' : null);
     if (!t) return;
@@ -1249,7 +1257,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
               const c = contarPiezas(juego, uid);
               const quedan = LIMITE[t] - c[t];
               const hayLugar = lugaresPara(geo, juego, uid, t).length > 0;
-              const ok = puedePagar(mano, t) && quedan > 0 && hayLugar;
+              const ok = puedePagar(manoReal, t) && quedan > 0 && hayLugar;
               const nombre = t === 'camino' ? 'Camino' : t === 'poblado' ? 'Poblado' : 'Ciudad';
               return (
                 <button key={t} className={construyendo === t ? 'cons on' : 'cons'} disabled={!ok} onClick={() => setConstruyendo(construyendo === t ? null : t)}>
