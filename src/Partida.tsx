@@ -367,6 +367,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const [animandoCount, setAnimandoCount] = useState(0);
   const animandoRoll = useRef(false);
   const ultimoCambioLocal = useRef(0);
+  const manoPreviaRef = useRef<Recursos>(manoReal);
 
   useEffect(() => {
     if (tirada === tiradaVista.current) return;
@@ -379,8 +380,20 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     const dadosFinVal = juego?.dados ?? [1, 1];
     control3dRef.current?.dados(dadosFinVal, () => {});
 
+    // Guardar manoPrevia antes de congelar
+    const manoPrevia = manoPreviaRef.current;
+    setAnimandoCount((c) => c + 1);
+    setManoMostrada(manoPrevia);
+
+    // Seguro contra congelamiento (10 segundos)
+    const safetyTimer = window.setTimeout(() => {
+      setAnimandoCount(0);
+      setManoMostrada(manoReal);
+      setBloqueadoAnim(false);
+      animandoRoll.current = false;
+    }, 10000);
+
     const run = async () => {
-      setAnimandoCount((c) => c + 1);
       try {
         // 1. Dados ruedan (2s)
         await new Promise((r) => window.setTimeout(r, 2000));
@@ -392,6 +405,8 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           setManoMostrada(manoReal);
           setBloqueadoAnim(false);
           animandoRoll.current = false;
+          setAnimandoCount(0);
+          window.clearTimeout(safetyTimer);
           return;
         }
 
@@ -419,10 +434,13 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
         console.log('PRODUCCION', producciones);
 
-        if (producciones.length === 0) {
+        const misProducciones = producciones.filter((p) => p.uid === uid);
+        if (producciones.length === 0 || misProducciones.length === 0) {
           setManoMostrada(manoReal);
           setBloqueadoAnim(false);
           animandoRoll.current = false;
+          setAnimandoCount(0);
+          window.clearTimeout(safetyTimer);
           return;
         }
 
@@ -456,8 +474,14 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         setManoMostrada(manoReal);
         setBloqueadoAnim(false);
         animandoRoll.current = false;
-      } finally {
-        setAnimandoCount((c) => Math.max(0, c - 1));
+        setAnimandoCount(0);
+        window.clearTimeout(safetyTimer);
+      } catch {
+        setManoMostrada(manoReal);
+        setBloqueadoAnim(false);
+        animandoRoll.current = false;
+        setAnimandoCount(0);
+        window.clearTimeout(safetyTimer);
       }
     };
 
@@ -465,6 +489,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
     return () => {
       window.clearInterval(intervalo);
+      window.clearTimeout(safetyTimer);
       animandoRoll.current = false;
     };
   }, [tirada]);
@@ -472,6 +497,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   useEffect(() => {
     console.log('SYNC', manoReal, manoMostrada, animandoCount);
     if (animandoCount === 0) {
+      manoPreviaRef.current = manoMostrada;
       setManoMostrada(manoReal);
     }
   }, [manoReal, animandoCount]);
@@ -1204,7 +1230,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           </div>
           {juego.avisos?.[uid] ? <div className="aviso-fuerte">⚠️ {juego.avisos[uid]}</div> : null}
           {soyBot ? <div className="aviso">🤖 Estás siendo reemplazado por un bot porque dejaste pasar el tiempo.</div> : null}
-          {juego.aviso ? <div className="aviso">{juego.aviso}</div> : null}
+          {!rodando && juego.aviso ? <div className="aviso">{juego.aviso}</div> : null}
         </div>
 
         <button className="salir flot-der" onClick={onSalir}>Salir</button>
