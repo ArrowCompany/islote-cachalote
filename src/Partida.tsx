@@ -496,7 +496,18 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         await Promise.all(tareas.map((t) => t()));
 
         // 7. Actualizar contadores
-        setManoMostrada(manoReal);
+        if (onActualizar) {
+          const snap = await get(ref(db, 'salas/' + codigo));
+          if (snap.exists()) {
+            const s = snap.val() as Sala;
+            onActualizar(s);
+            setManoMostrada({ ...manoVacia(), ...(s.manos?.[uid] ?? {}) });
+          } else {
+            setManoMostrada(manoReal);
+          }
+        } else {
+          setManoMostrada(manoReal);
+        }
         setBloqueadoAnim(false);
         animandoRoll.current = false;
         setAnimandoCount(0);
@@ -520,12 +531,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   }, [tirada]);
 
   useEffect(() => {
-    console.log('SYNC', manoReal, manoMostrada, animandoCount);
-    if (animandoCount === 0) {
-      manoPreviaRef.current = manoMostrada;
-      setManoMostrada(manoReal);
-    }
-  }, [manoReal, animandoCount]);
+    if (animandoRoll.current) return;
+    manoPreviaRef.current = manoMostrada;
+    setManoMostrada(manoReal);
+  }, [manoReal]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
@@ -577,9 +586,13 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const prevPiezas = useRef(piezasN);
 
   const prevManosRef = useRef(sala.manos ?? {});
+  const prevLadronRef = useRef<string | undefined>(juego?.ladron);
   useEffect(() => {
     if (!sala.manos || !juego) return;
-    if (juego.fase !== 'mover' && juego.fase !== 'robar') {
+    const prevLadron = prevLadronRef.current;
+    const ladronCambio = prevLadron !== undefined && prevLadron !== juego.ladron;
+    prevLadronRef.current = juego.ladron;
+    if (!ladronCambio) {
       prevManosRef.current = sala.manos;
       return;
     }
@@ -692,7 +705,18 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                 });
               } finally {
                 animandoRoll.current = false;
-                setManoMostrada(manoReal);
+                if (onActualizar) {
+                  const snap = await get(ref(db, 'salas/' + codigo));
+                  if (snap.exists()) {
+                    const s = snap.val() as Sala;
+                    onActualizar(s);
+                    setManoMostrada({ ...manoVacia(), ...(s.manos?.[uid] ?? {}) });
+                  } else {
+                    setManoMostrada(manoReal);
+                  }
+                } else {
+                  setManoMostrada(manoReal);
+                }
               }
             }
           })();
@@ -761,7 +785,18 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                 await Promise.all(tareas.map((t) => t()));
               } finally {
                 animandoRoll.current = false;
-                setManoMostrada(manoReal);
+                if (onActualizar) {
+                  const snap = await get(ref(db, 'salas/' + codigo));
+                  if (snap.exists()) {
+                    const s = snap.val() as Sala;
+                    onActualizar(s);
+                    setManoMostrada({ ...manoVacia(), ...(s.manos?.[uid] ?? {}) });
+                  } else {
+                    setManoMostrada(manoReal);
+                  }
+                } else {
+                  setManoMostrada(manoReal);
+                }
               }
             })();
           }
