@@ -368,6 +368,31 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const animandoRoll = useRef(false);
   const ultimoCambioLocal = useRef(0);
   const manoPreviaRef = useRef<Recursos>(manoReal);
+  const ultimaTiradaVistasRef = useRef(juego?.tirada ?? 0);
+  const tiradaActual = juego?.tirada ?? 0;
+
+  const esTiradaConProduccionParaMi = useMemo(() => {
+    if (!juego || !geo || !partida || juego.fase === 'orden' || !juego.dados) return false;
+    const suma = juego.dados[0] + juego.dados[1];
+    if (suma === 7) return false;
+    const mapa = mapaDe(partida.modo, partida.semilla);
+    const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
+    for (const sm of sumas) {
+      for (const h of mapa.hexes) {
+        if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') continue;
+        const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
+        for (const [vid] of vertices) {
+          const pieza = juego.poblados[vid];
+          if (pieza && pieza.uid === uid) return true;
+        }
+      }
+    }
+    return false;
+  }, [juego?.tirada, juego?.dados, juego?.ladron, geo, partida, uid]);
+
+  const esTiradaNueva = tiradaActual > 0 && tiradaActual !== ultimaTiradaVistasRef.current;
+  const congelada = esTiradaNueva && animandoCount > 0 && esTiradaConProduccionParaMi;
+  const manoQueSeMuestra = congelada ? manoPreviaRef.current : manoMostrada;
 
   useEffect(() => {
     if (tirada === tiradaVista.current) return;
@@ -892,7 +917,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const colorJ = (id: string) => colorDe(sala.jugadores?.[id]?.color ?? '');
   const miColor = colorJ(uid);
   const textoMio = esClaro(miColor) ? '#1b1b1b' : '#ffffff';
-  const mano = manoMostrada;  const valores: [number, number] = rodando ? azar : (juego.dados ?? [1, 1]);
+  const mano = manoQueSeMuestra;  const valores: [number, number] = rodando ? azar : (juego.dados ?? [1, 1]);
   const suma = juego.dados ? juego.dados[0] + juego.dados[1] : 0;
   const enOrden = juego.fase === 'orden';
   const enColocacion = juego.fase === 'colocacion';
@@ -1615,7 +1640,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           {RECURSOS.map((r) => (
             <div key={r} className="rec" title={NOMBRE_RECURSO[r]} data-jugador={uid} data-recurso={r}>
               <IconoRecurso tipo={r} />
-              <b className={popRecurso === r ? 'pop-num' : ''}>{manoMostrada[r]}</b>
+              <b className={popRecurso === r ? 'pop-num' : ''}>{manoQueSeMuestra[r]}</b>
             </div>
           ))}
         </div>
