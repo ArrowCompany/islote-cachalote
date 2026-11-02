@@ -532,9 +532,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
   useEffect(() => {
     if (animandoRoll.current) return;
+    if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) return;
     manoPreviaRef.current = manoMostrada;
     setManoMostrada(manoReal);
-  }, [manoReal]);
+  }, [manoReal, juego?.fase, juego?.paso]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
