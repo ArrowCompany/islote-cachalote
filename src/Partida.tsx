@@ -530,6 +530,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     };
   }, [tirada]);
 
+  const prevLadronSyncRef = useRef(juego?.ladron);
   useEffect(() => {
     if (animandoRoll.current) return;
     if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) {
@@ -537,9 +538,14 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       const hayNuevo = currVerts.some((v) => !conocidosPoblados.current.has(v));
       if (hayNuevo) return;
     }
+    // Bloquear sync si el cachalote se movió (robo en curso)
+    if (prevLadronSyncRef.current !== undefined && prevLadronSyncRef.current !== juego?.ladron) {
+      return;
+    }
+    prevLadronSyncRef.current = juego?.ladron;
     manoPreviaRef.current = manoMostrada;
     setManoMostrada(manoReal);
-  }, [manoReal, juego?.fase, juego?.paso, juego?.poblados]);
+  }, [manoReal, juego?.fase, juego?.paso, juego?.poblados, juego?.ladron]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
