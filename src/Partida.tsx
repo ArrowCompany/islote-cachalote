@@ -534,12 +534,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   useEffect(() => {
     if (animandoRoll.current) return;
     if (pobladoPendienteRef.current) return;
-    if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) {
-      const currVerts = Object.keys(juego?.poblados ?? {});
-      const hayNuevo = currVerts.some((v) => !conocidosPoblados.current.has(v));
-      if (hayNuevo) return;
-    }
-    // Bloquear sync si el cachalote se movió (robo en curso)
+    if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) return;
     if (prevLadronSyncRef.current !== undefined && prevLadronSyncRef.current !== juego?.ladron) {
       return;
     }
