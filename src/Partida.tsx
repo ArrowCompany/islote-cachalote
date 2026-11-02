@@ -533,6 +533,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const prevLadronSyncRef = useRef(juego?.ladron);
   useEffect(() => {
     if (animandoRoll.current) return;
+    if (pobladoPendienteRef.current) return;
     if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) {
       const currVerts = Object.keys(juego?.poblados ?? {});
       const hayNuevo = currVerts.some((v) => !conocidosPoblados.current.has(v));
@@ -716,6 +717,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                 });
               } finally {
                 animandoRoll.current = false;
+                pobladoPendienteRef.current = false;
                 if (onActualizar) {
                   const snap = await get(ref(db, 'salas/' + codigo));
                   if (snap.exists()) {
@@ -740,12 +742,11 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
   const conocidosPoblados = useRef<Set<string>>(new Set(Object.keys(juego?.poblados ?? {})));
   const prevPobladosLen = useRef(Object.keys(juego?.poblados ?? {}).length);
+  const pobladoPendienteRef = useRef(false);
   useEffect(() => {
     if (!juego || !geo || !partida) return;
     const currVerts = Object.keys(juego.poblados);
     const nuevos = currVerts.filter((v) => !conocidosPoblados.current.has(v));
-    // actualizar conocidos
-    currVerts.forEach((v) => conocidosPoblados.current.add(v));
     if (nuevos.length !== 1) {
       prevPobladosLen.current = currVerts.length;
       return;
@@ -757,6 +758,9 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     const nuevoVertice = nuevos[0];
     const nuevaPieza = juego.poblados[nuevoVertice];
     if (!nuevaPieza) { prevPobladosLen.current = currVerts.length; return; }
+    // marcar pendiente para bloquear sync
+    pobladoPendienteRef.current = true;
+    conocidosPoblados.current.add(nuevoVertice);
         const mapa = mapaDe(partida.modo, partida.semilla);
         const vert = geo.vertices[nuevoVertice];
         if (vert && vert.hexes) {
@@ -796,6 +800,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                 await Promise.all(tareas.map((t) => t()));
               } finally {
                 animandoRoll.current = false;
+                pobladoPendienteRef.current = false;
                 if (onActualizar) {
                   const snap = await get(ref(db, 'salas/' + codigo));
                   if (snap.exists()) {
