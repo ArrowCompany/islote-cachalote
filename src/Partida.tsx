@@ -532,10 +532,14 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
   useEffect(() => {
     if (animandoRoll.current) return;
-    if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) return;
+    if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) {
+      const currVerts = Object.keys(juego?.poblados ?? {});
+      const hayNuevo = currVerts.some((v) => !conocidosPoblados.current.has(v));
+      if (hayNuevo) return;
+    }
     manoPreviaRef.current = manoMostrada;
     setManoMostrada(manoReal);
-  }, [manoReal, juego?.fase, juego?.paso]);
+  }, [manoReal, juego?.fase, juego?.paso, juego?.poblados]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
