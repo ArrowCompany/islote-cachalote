@@ -746,7 +746,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       prevPobladosLen.current = currVerts.length;
       return;
     }
-    if (!(juego.fase === 'colocacion' && juego.paso >= juego.orden.length)) {
+    if (juego.fase !== 'colocacion') {
       prevPobladosLen.current = currVerts.length;
       return;
     }
