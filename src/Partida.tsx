@@ -785,12 +785,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                     prod: { uid: nuevaPieza.uid, recurso: h.tipo }
                   });
 
-                  if (nuevaPieza.uid === uid) {
-                    setManoMostrada((prev) => ({
-                      ...prev,
-                      [h.tipo as Recurso]: ((prev as any)[h.tipo] ?? 0) + 1,
-                    }));
-                  }
+                  // (recurso se refleja al final via setManoMostrada(manoReal))
                 });
                 await Promise.all(tareas.map((t) => t()));
               } finally {
