@@ -649,7 +649,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
             origen: origenEl as HTMLElement,
             destino: destinoEl as HTMLElement,
             conSubida: false,
-            reverso: true,
+            reverso: thief !== uid,
             prod: { uid: thief, recurso: recursoRobado! }
           });
 
