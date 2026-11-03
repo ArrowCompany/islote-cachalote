@@ -624,10 +624,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     }
 
     if (thief && victim && recursoRobado && thief !== victim) {
-      const origenEl = (document.querySelector('[data-mesa-jugador="' + victim + '"]') as HTMLElement | null) ||
+      const origenEl = (document.querySelector('[data-mano="' + victim + '"]') as HTMLElement | null) ||
+                        (document.querySelector('[data-mesa-jugador="' + victim + '"]') as HTMLElement | null) ||
                         (document.querySelector('[data-jugador="' + victim + '"][data-recurso="' + recursoRobado + '"]') as HTMLElement | null) ||
-                        (document.querySelector('[data-jugador="' + victim + '"]') as HTMLElement | null) ||
-                        (document.querySelector('[data-mano="' + victim + '"]') as HTMLElement | null);
+                        (document.querySelector('[data-jugador="' + victim + '"]') as HTMLElement | null);
       const destinoEl = (document.querySelector('[data-mano="' + thief + '"]') as HTMLElement | null) ||
                         (document.querySelector('[data-mesa-jugador="' + thief + '"]') as HTMLElement | null) ||
                         (document.querySelector('[data-jugador="' + thief + '"][data-recurso="' + recursoRobado + '"]') as HTMLElement | null) ||
