@@ -1131,8 +1131,8 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         const vb = geo.vertices[a.b];
         return (
           <g key={e} pointerEvents="none">
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={10} strokeLinecap="round" />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={6} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={8} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={4} strokeLinecap="round" />
           </g>
         );
       })}
@@ -1183,8 +1183,8 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         const vb = geo.vertices[a.b];
         return (
           <g pointerEvents="none" opacity={0.9}>
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={10} strokeLinecap="round" />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={miColor} strokeWidth={6} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={8} strokeLinecap="round" />
+            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={miColor} strokeWidth={4} strokeLinecap="round" />
           </g>
         );
       })()}
@@ -1356,8 +1356,8 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                   <svg viewBox="-20 -25 40 38" width="34" height="32" aria-hidden="true">
                     {t === 'camino' ? (
                       <g>
-                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#000000" strokeWidth={10} strokeLinecap="round" />
-                        <line x1={-16} y1={6} x2={16} y2={-12} stroke={miColor} strokeWidth={6} strokeLinecap="round" />
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke="#000000" strokeWidth={8} strokeLinecap="round" />
+                        <line x1={-16} y1={6} x2={16} y2={-12} stroke={miColor} strokeWidth={4} strokeLinecap="round" />
                         <path d={listones(-16, 6, 16, -12, 1)} stroke="rgba(0,0,0,0.35)" strokeWidth={1.4} fill="none" />
                       </g>
                     ) : t === 'poblado' ? <FormaPoblado color={miColor} /> : <FormaCiudad color={miColor} />}
