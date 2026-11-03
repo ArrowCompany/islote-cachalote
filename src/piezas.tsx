@@ -94,15 +94,16 @@ export const BORDE_PIEZA = {
   vectorEffect: 'non-scaling-stroke' as const,
 };
 
-export function FormaCamino({ color, len = 22 }: { color: string; len?: number }) {
+export function FormaCamino({ color, len = 18 }: { color: string; len?: number }) {
   const sw = BORDE_PIEZA.strokeWidth;
+  const height = 7;
   return (
     <rect
       x={-len / 2 + sw / 2}
-      y={-4.5 + sw / 2}
+      y={-height / 2 + sw / 2}
       width={len - sw}
-      height={9 - sw}
-      rx={2}
+      height={height - sw}
+      rx={0}
       fill={color}
       stroke={BORDE_PIEZA.stroke}
       strokeWidth={sw}
