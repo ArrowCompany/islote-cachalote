@@ -363,6 +363,15 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const disparado = useRef(-1);
   const control3dRef = useRef<Control3D | null>(null);
   const manoReal = useMemo(() => ({ ...manoVacia(), ...(sala.manos?.[uid] ?? {}) }), [sala.manos, uid]);
+  const [historial, setHistorial] = useState<string[]>([]);
+  useEffect(() => {
+    if (juego?.aviso) {
+      setHistorial((prev) => {
+        if (prev.length > 0 && prev[prev.length - 1] === juego.aviso) return prev;
+        return [...prev, juego.aviso as string];
+      });
+    }
+  }, [juego?.aviso]);
   const [manoMostrada, setManoMostrada] = useState<Recursos>(manoReal);
   const [animandoCount, setAnimandoCount] = useState(0);
   const animandoRoll = useRef(false);
@@ -1648,7 +1657,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           <div className="panel panel-chat" style={{ maxHeight: '60vh', overflow: 'auto' }}>
             <h3>Historial de la partida</h3>
             <div className="chat-mensajes">
-              {[].map((entry: any, i) => (
+              {historial.map((entry, i) => (
                 <div key={i} className="chat-msg">• {entry}</div>
               ))}
             </div>
