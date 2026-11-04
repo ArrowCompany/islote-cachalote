@@ -46,6 +46,22 @@ const esClaro = (hex: string) => {
   return (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 150;
 };
 
+const ACORTE_CAMINO = 6;
+const shortenLine = (x1: number, y1: number, x2: number, y2: number) => {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len <= ACORTE_CAMINO * 2) return { x1, y1, x2, y2 };
+  const ux = dx / len;
+  const uy = dy / len;
+  return {
+    x1: x1 + ux * ACORTE_CAMINO,
+    y1: y1 + uy * ACORTE_CAMINO,
+    x2: x2 - ux * ACORTE_CAMINO,
+    y2: y2 - uy * ACORTE_CAMINO,
+  };
+};
+
 function Dado({ valor, rodando }: { valor: number; rodando: boolean }) {
   return (
     <div className={rodando ? 'dado rodando' : 'dado'}>
@@ -751,20 +767,13 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     if (!juego || !geo || !partida) return;
     const currVerts = Object.keys(juego.poblados);
     const nuevos = currVerts.filter((v) => !conocidosPoblados.current.has(v));
-    if (nuevos.length !== 1) {
-      prevPobladosLen.current = currVerts.length;
-      return;
-    }
-    if (!(juego.fase === 'colocacion' && juego.paso >= juego.orden.length)) {
-      prevPobladosLen.current = currVerts.length;
-      return;
-    }
+    conocidosPoblados.current = new Set(currVerts);
+    prevPobladosLen.current = currVerts.length;
+    if (nuevos.length !== 1) return;
+    if (!(juego.fase === 'colocacion' && juego.paso >= juego.orden.length)) return;
     const nuevoVertice = nuevos[0];
     const nuevaPieza = juego.poblados[nuevoVertice];
-    if (!nuevaPieza) { prevPobladosLen.current = currVerts.length; return; }
-    // marcar pendiente para bloquear sync
-    pobladoPendienteRef.current = true;
-    conocidosPoblados.current.add(nuevoVertice);
+    if (!nuevaPieza) return;
         const mapa = mapaDe(partida.modo, partida.semilla);
         const vert = geo.vertices[nuevoVertice];
         if (vert && vert.hexes) {
@@ -773,6 +782,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
             .filter((h): h is NonNullable<typeof h> => !!h && h.tipo !== 'desert');
 
           if (hexesAdyacentes.length > 0) {
+            pobladoPendienteRef.current = true;
             const hexIds = hexesAdyacentes.map((h) => h.r + ',' + h.c);
             void (async () => {
               animandoRoll.current = true;
@@ -794,7 +804,12 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                     prod: { uid: nuevaPieza.uid, recurso: h.tipo }
                   });
 
-                  // (recurso se refleja al final via setManoMostrada(manoReal))
+                  if (nuevaPieza.uid === uid) {
+                    setManoMostrada((prev) => ({
+                      ...prev,
+                      [h.tipo as Recurso]: ((prev as any)[h.tipo] ?? 0) + 1,
+                    }));
+                  }
                 });
                 await Promise.all(tareas.map((t) => t()));
               } finally {
@@ -816,7 +831,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
             })();
           }
         }
-    prevPobladosLen.current = currVerts.length;
   }, [juego?.poblados, juego?.fase, juego?.paso, geo, partida, uid]);
 
   useEffect(() => {
@@ -1138,10 +1152,11 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         if (!a) return null;
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
+        const s = shortenLine(va.x, va.y, vb.x, vb.y);
         return (
           <g key={e} pointerEvents="none">
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={8} strokeLinecap="round" />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={colorJ(dueno)} strokeWidth={4} strokeLinecap="round" />
+            <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="#000000" strokeWidth={9} strokeLinecap="butt" />
+            <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={colorJ(dueno)} strokeWidth={7} strokeLinecap="butt" />
           </g>
         );
       })}
@@ -1190,10 +1205,11 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
         const a = geo.aristas[pendiente.id];
         const va = geo.vertices[a.a];
         const vb = geo.vertices[a.b];
+        const s = shortenLine(va.x, va.y, vb.x, vb.y);
         return (
           <g pointerEvents="none" opacity={0.9}>
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke="#000000" strokeWidth={8} strokeLinecap="round" />
-            <line x1={va.x} y1={va.y} x2={vb.x} y2={vb.y} stroke={miColor} strokeWidth={4} strokeLinecap="round" />
+            <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="#000000" strokeWidth={9} strokeLinecap="butt" />
+            <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={miColor} strokeWidth={7} strokeLinecap="butt" />
           </g>
         );
       })()}
