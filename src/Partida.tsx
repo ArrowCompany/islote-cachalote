@@ -378,7 +378,16 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const tiradaVista = useRef(tirada);
   const disparado = useRef(-1);
   const control3dRef = useRef<Control3D | null>(null);
-  const manoReal = useMemo(() => ({ ...manoVacia(), ...(sala.manos?.[uid] ?? {}) }), [sala.manos, uid]);
+  const ultimaManoRef = useRef<Recursos>(manoVacia());
+  const manoReal = useMemo(() => {
+    const m = sala.manos?.[uid];
+    if (m) {
+      const r = { ...manoVacia(), ...m };
+      ultimaManoRef.current = r;
+      return r;
+    }
+    return ultimaManoRef.current;
+  }, [sala.manos, uid]);
   const [historial, setHistorial] = useState<string[]>([]);
   useEffect(() => {
     if (juego?.aviso) {
