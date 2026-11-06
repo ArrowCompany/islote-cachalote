@@ -388,36 +388,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       });
     }
   }, [juego?.aviso]);
-  const [manoMostrada, setManoMostrada] = useState<Recursos>(manoReal);
-  const [animandoCount, setAnimandoCount] = useState(0);
   const animandoRoll = useRef(false);
-  const ultimoCambioLocal = useRef(0);
-  const manoPreviaRef = useRef<Recursos>(manoReal);
-  const ultimaTiradaVistasRef = useRef(juego?.tirada ?? 0);
-  const tiradaActual = juego?.tirada ?? 0;
-
-  const esTiradaConProduccionParaMi = useMemo(() => {
-    if (!juego || !geo || !partida || juego.fase === 'orden' || !juego.dados) return false;
-    const suma = juego.dados[0] + juego.dados[1];
-    if (suma === 7) return false;
-    const mapa = mapaDe(partida.modo, partida.semilla);
-    const sumas = suma === 2 || suma === 12 ? [2, 12] : [suma];
-    for (const sm of sumas) {
-      for (const h of mapa.hexes) {
-        if (h.num !== sm || (h.r + ',' + h.c) === juego.ladron || h.tipo === 'desert') continue;
-        const vertices = Object.entries(geo.vertices).filter(([_, v]) => (v.hexes ?? []).some(([r, c]) => r === h.r && c === h.c));
-        for (const [vid] of vertices) {
-          const pieza = juego.poblados[vid];
-          if (pieza && pieza.uid === uid) return true;
-        }
-      }
-    }
-    return false;
-  }, [juego?.tirada, juego?.dados, juego?.ladron, geo, partida, uid]);
-
-  const esTiradaNueva = tiradaActual > 0 && tiradaActual !== ultimaTiradaVistasRef.current;
-  const congelada = esTiradaNueva && animandoCount > 0 && esTiradaConProduccionParaMi;
-  const manoQueSeMuestra = congelada ? manoPreviaRef.current : manoMostrada;
 
   useEffect(() => {
     if (tirada === tiradaVista.current) return;
@@ -430,19 +401,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     const dadosFinVal = juego?.dados ?? [1, 1];
     control3dRef.current?.dados(dadosFinVal, () => {});
 
-    // Guardar manoPrevia antes de congelar
-    const manoPrevia = manoPreviaRef.current;
-    setAnimandoCount((c) => c + 1);
-    setManoMostrada(manoPrevia);
-
-    // Seguro contra congelamiento (10 segundos)
-    const safetyTimer = window.setTimeout(() => {
-      setAnimandoCount(0);
-      setManoMostrada(manoReal);
-      setBloqueadoAnim(false);
-      animandoRoll.current = false;
-    }, 10000);
-
     const run = async () => {
       try {
         // 1. Dados ruedan (2s)
@@ -452,11 +410,8 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
         const suma = dadosFinVal[0] + dadosFinVal[1];
         if (suma === 7 || !juego || !geo || !partida) {
-          setManoMostrada(manoReal);
           setBloqueadoAnim(false);
           animandoRoll.current = false;
-          setAnimandoCount(0);
-          window.clearTimeout(safetyTimer);
           return;
         }
 
@@ -486,11 +441,8 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
         const misProducciones = producciones.filter((p) => p.uid === uid);
         if (producciones.length === 0 || misProducciones.length === 0) {
-          setManoMostrada(manoReal);
           setBloqueadoAnim(false);
           animandoRoll.current = false;
-          setAnimandoCount(0);
-          window.clearTimeout(safetyTimer);
           return;
         }
 
@@ -507,10 +459,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true, prod });
 
           if (prod.uid === uid) {
-            setManoMostrada((prev) => ({
-              ...prev,
-              [prod.recurso as Recurso]: ((prev as any)[prod.recurso] ?? 0) + 1,
-            }));
+            // recurso se refleja vía Firebase al final
           }
 
           // Al llegar: suma +1 con pop
@@ -526,23 +475,15 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           if (snap.exists()) {
             const s = snap.val() as Sala;
             onActualizar(s);
-            setManoMostrada({ ...manoVacia(), ...(s.manos?.[uid] ?? {}) });
           } else {
-            setManoMostrada(manoReal);
           }
         } else {
-          setManoMostrada(manoReal);
         }
         setBloqueadoAnim(false);
         animandoRoll.current = false;
-        setAnimandoCount(0);
-        window.clearTimeout(safetyTimer);
       } catch {
-        setManoMostrada(manoReal);
         setBloqueadoAnim(false);
         animandoRoll.current = false;
-        setAnimandoCount(0);
-        window.clearTimeout(safetyTimer);
       }
     };
 
@@ -550,23 +491,10 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
 
     return () => {
       window.clearInterval(intervalo);
-      window.clearTimeout(safetyTimer);
       animandoRoll.current = false;
     };
   }, [tirada]);
 
-  const prevLadronSyncRef = useRef(juego?.ladron);
-  useEffect(() => {
-    if (animandoRoll.current) return;
-    if (pobladoPendienteRef.current) return;
-    if (juego?.fase === 'colocacion' && (juego?.paso ?? 0) >= (juego?.orden?.length ?? 0)) return;
-    if (prevLadronSyncRef.current !== undefined && prevLadronSyncRef.current !== juego?.ladron) {
-      return;
-    }
-    prevLadronSyncRef.current = juego?.ladron;
-    manoPreviaRef.current = manoMostrada;
-    setManoMostrada(manoReal);
-  }, [manoReal, juego?.fase, juego?.paso, juego?.poblados, juego?.ladron]);
 
   useEffect(() => {
     if (!hayJuego || faseActual === 'fin') return;
@@ -659,10 +587,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                         (document.querySelector('[data-jugador="' + thief + '"]') as HTMLElement | null);
 
       if (victim === uid) {
-        setManoMostrada((prevM) => ({
-          ...prevM,
-          [recursoRobado!]: Math.max(0, (prevM[recursoRobado!] ?? 0) - 1),
-        }));
+        // recurso se refleja al final via Firebase
       }
 
       animandoRoll.current = true;
@@ -678,15 +603,12 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
             prod: { uid: thief, recurso: recursoRobado! }
           });
 
-          if (thief === uid) {
-            setManoMostrada((prevM) => ({
-              ...prevM,
-              [recursoRobado!]: (prevM[recursoRobado!] ?? 0) + 1,
-            }));
-          }
+           if (thief === uid) {
+             // recurso se refleja al final via Firebase
+           }
+
         } finally {
           animandoRoll.current = false;
-          setManoMostrada(manoReal);
         }
       })();
     }
@@ -719,10 +641,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
               const origenEl = document.querySelector('[data-jugador="' + id + '"][data-recurso="' + r + '"]') || document.querySelector('[data-mano="' + id + '"]');
 
               if (id === uid) {
-                setManoMostrada((prevM) => ({
-                  ...prevM,
-                  [r]: Math.max(0, (prevM[r] ?? 0) - 1),
-                }));
+                // recurso se refleja al final via Firebase
               }
 
               animandoRoll.current = true;
@@ -743,12 +662,9 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                   if (snap.exists()) {
                     const s = snap.val() as Sala;
                     onActualizar(s);
-                    setManoMostrada({ ...manoVacia(), ...(s.manos?.[uid] ?? {}) });
                   } else {
-                    setManoMostrada(manoReal);
                   }
                 } else {
-                  setManoMostrada(manoReal);
                 }
               }
             }
@@ -804,12 +720,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                     prod: { uid: nuevaPieza.uid, recurso: h.tipo }
                   });
 
-                  if (nuevaPieza.uid === uid) {
-                    setManoMostrada((prev) => ({
-                      ...prev,
-                      [h.tipo as Recurso]: ((prev as any)[h.tipo] ?? 0) + 1,
-                    }));
-                  }
                 });
                 await Promise.all(tareas.map((t) => t()));
               } finally {
@@ -820,17 +730,14 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
                   if (snap.exists()) {
                     const s = snap.val() as Sala;
                     onActualizar(s);
-                    setManoMostrada({ ...manoVacia(), ...(s.manos?.[uid] ?? {}) });
                   } else {
-                    setManoMostrada(manoReal);
                   }
                 } else {
-                  setManoMostrada(manoReal);
                 }
               }
             })();
           }
-        }
+  }
   }, [juego?.poblados, juego?.fase, juego?.paso, geo, partida, uid]);
 
   useEffect(() => {
@@ -981,7 +888,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const colorJ = (id: string) => colorDe(sala.jugadores?.[id]?.color ?? '');
   const miColor = colorJ(uid);
   const textoMio = esClaro(miColor) ? '#1b1b1b' : '#ffffff';
-  const mano = manoQueSeMuestra;  const valores: [number, number] = rodando ? azar : (juego.dados ?? [1, 1]);
+  const mano = manoReal;  const valores: [number, number] = rodando ? azar : (juego.dados ?? [1, 1]);
   const suma = juego.dados ? juego.dados[0] + juego.dados[1] : 0;
   const enOrden = juego.fase === 'orden';
   const enColocacion = juego.fase === 'colocacion';
@@ -1001,7 +908,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       }
     } catch {
       setError(mensaje);
-      setManoMostrada(manoReal);
     }
   };
   const lanzarOrden = () => intentar(() => lanzarDadosOrden(codigo, uid, numTurno), 'No pude lanzar los dados, intenta otra vez');
@@ -1026,13 +932,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const quitarOferta = () => (oferta ? intentar(() => cancelarCambio(codigo, uid, oferta.id), 'No pude cancelar la oferta') : Promise.resolve());
   const aceptarOferta = () => {
     if (!ofertaEntrante) return;
-    setManoMostrada((prev) => {
-      const n = { ...prev };
-      RECURSOS.forEach((r) => {
-        n[r] = (n[r] ?? 0) + (ofertaEntrante.da[r] ?? 0) - (ofertaEntrante.pide[r] ?? 0);
-      });
-      return n;
-    });
     return void intentar(() => aceptarCambio(codigo, uid, ofertaEntrante.id), 'No pude aceptar: revisa que tengas las cartas');
   };
   const rechazarOferta = () => (ofertaEntrante ? intentar(() => rechazarCambio(codigo, uid, ofertaEntrante.id), 'No pude rechazar la oferta') : Promise.resolve());
@@ -1040,8 +939,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
     if (!doy || !recibo) return;
     const d = doy, r = recibo;
     const tasa = tasas[d] ?? 4;
-    ultimoCambioLocal.current = Date.now();
-    setManoMostrada((prev) => ({ ...prev, [d]: ((prev as any)[d] ?? 0) - tasa, [r]: ((prev as any)[r] ?? 0) + 1 }));
 
     // Animación: tasa cartas vuelan del mazo del jugador al banco (todas a la vez, con pequeño escalon).
     const origenEl = document.querySelector('[data-mano="' + uid + '"]') as HTMLElement | null;
@@ -1087,19 +984,12 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   };
   const comprarYa = () => {
     setConfirmarCarta(false);
-    ultimoCambioLocal.current = Date.now();
-    setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, ore: ((prev as any).ore ?? 0) - 1 }));
     void intentar(() => comprarDesarrollo(codigo, uid, numTurno), 'No pude comprar la carta');
   };
   const jugarYa = (c: CartaDes, param: ParamCarta) => {
     setUsando(null);
     setElegidos([]);
     setPanel('ninguno');
-    if (c.tipo === 'abundancia' && (param as any).dar) {
-      ultimoCambioLocal.current = Date.now();
-      const elegido = (param as any).dar[0];
-      setManoMostrada((prev) => ({ ...prev, [elegido]: ((prev as any)[elegido] ?? 0) + 2 }));
-    }
     void intentar(() => usarCarta(codigo, uid, numTurno, c.id, param), 'No pude jugar la carta');
   };
   const puedeJugar = (c: CartaDes) => soyActual && (juego.fase === 'tirar' || juego.fase === 'accion') && !juego.jugoCarta && c.tipo !== 'punto' && c.turno < juego.rondaTurno;
@@ -1107,13 +997,9 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
   const construirAqui = (id: string) => {
     const t = construyendo ?? (gratis ? 'camino' : null);
     if (!t) return;
-    ultimoCambioLocal.current = Date.now();
     if (t === 'camino') {
-      setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
     } else if (t === 'poblado') {
-      setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
     } else if (t === 'ciudad') {
-      setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 2, ore: ((prev as any).ore ?? 0) - 3 }));
     }
     setConstruyendo(null);
     void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
@@ -1127,7 +1013,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       if (miTurnoColocar) void poner(id);
       else {
         setConstruyendo(null);
-        setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
         void intentar(() => construirPieza(codigo, uid, numTurno, 'poblado', id), 'No pude construir, intenta otra vez');
       }
     } else if (tipo === 'camino') {
@@ -1135,9 +1020,6 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
       else {
         setConstruyendo(null);
         const t = construyendo ?? (gratis ? 'camino' : null);
-        if (t === 'camino') setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1 }));
-        else if (t === 'poblado') setManoMostrada((prev) => ({ ...prev, wood: ((prev as any).wood ?? 0) - 1, brick: ((prev as any).brick ?? 0) - 1, wool: ((prev as any).wool ?? 0) - 1, grain: ((prev as any).grain ?? 0) - 1 }));
-        else if (t === 'ciudad') setManoMostrada((prev) => ({ ...prev, grain: ((prev as any).grain ?? 0) - 2, ore: ((prev as any).ore ?? 0) - 3 }));
         if (t) void intentar(() => construirPieza(codigo, uid, numTurno, t, id), 'No pude construir, intenta otra vez');
       }
     }
@@ -1706,7 +1588,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
           {RECURSOS.map((r) => (
             <div key={r} className="rec" title={NOMBRE_RECURSO[r]} data-jugador={uid} data-recurso={r}>
               <IconoRecurso tipo={r} />
-              <b className={popRecurso === r ? 'pop-num' : ''}>{manoQueSeMuestra[r]}</b>
+              <b className={popRecurso === r ? 'pop-num' : ''}>{manoReal[r]}</b>
             </div>
           ))}
         </div>
