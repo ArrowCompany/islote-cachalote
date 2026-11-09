@@ -467,11 +467,7 @@ export default function Partida({ sala, uid, codigo, onSalir, onActualizar }: Pr
             : document.querySelector('[data-jugador="' + prod.uid + '"]') as HTMLElement | null;
           await volarCarta({ recurso: prod.recurso, origen: hexEl, destino: destEl, conSubida: true, prod });
 
-          if (prod.uid === uid) {
-            // recurso se refleja vía Firebase al final
-          }
-
-          // Al llegar: suma +1 con pop
+          // Al llegar: pop visual
           setPopRecurso(prod.recurso);
           window.setTimeout(() => setPopRecurso(null), 400);
         });
